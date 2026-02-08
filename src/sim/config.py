@@ -3,12 +3,19 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class SimConfig:
-    board_width: int = 20
-    board_height: int = 15
+#   TODO: make cli.py respect this
+    board_width: int = 40
+    board_height: int = 30
     cell_size: int = 32
-    fps: int = 8
-    creature_count: int = 10
-    random_seed: int = 7
+    fps: int = 60
+    creature_count: int = 50
+    random_seed: int | None = None
+    convert_loser_to_winner: bool = True
+    creature_radius: int = 20
+    creature_speed: float = 40.0
+    min_speed_multiplier: float = 0.3
+    max_speed_multiplier: float = 3
+    tps_multiplier: float = 1.0
 
     @property
     def window_width(self) -> int:

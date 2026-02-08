@@ -9,3 +9,5 @@ class Creature:
     id: int
     kind: CreatureType
     pos: Position
+    vx: float = 0.0
+    vy: float = 0.0

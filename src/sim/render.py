@@ -1,3 +1,6 @@
+from functools import lru_cache
+from pathlib import Path
+
 import pygame
 
 from .config import SimConfig
@@ -5,34 +8,126 @@ from .game import GameState, creature_counts
 from .rps import CreatureType
 
 _BG_COLOR = (240, 243, 247)
-_GRID_COLOR = (200, 206, 214)
 _COLOR_BY_TYPE = {
     CreatureType.ROCK: (220, 80, 80),
     CreatureType.PAPER: (70, 130, 210),
     CreatureType.SCISSORS: (70, 170, 90),
 }
 _TEXT_COLOR = (25, 30, 40)
+_SPRITE_DIR = Path("assets/sprites")
 
 
-def _draw_grid(screen: pygame.Surface, config: SimConfig) -> None:
-    for x in range(config.board_width + 1):
-        px = x * config.cell_size
-        pygame.draw.line(screen, _GRID_COLOR, (px, 0), (px, config.window_height), 1)
+def _build_default_sprite(kind: CreatureType, radius: int) -> pygame.Surface:
+    diameter = radius * 2
+    sprite = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
 
-    for y in range(config.board_height + 1):
-        py = y * config.cell_size
-        pygame.draw.line(screen, _GRID_COLOR, (0, py), (config.window_width, py), 1)
+    if kind == CreatureType.ROCK:
+        rock_fill = (150, 155, 165)
+        rock_outline = (75, 80, 90)
+        points = [
+            (radius // 2, radius + radius // 4),
+            (radius - radius // 3, radius // 3),
+            (radius + radius // 6, radius // 5),
+            (radius + radius // 2, radius // 2),
+            (radius + radius // 2, radius + radius // 4),
+            (radius + radius // 8, diameter - radius // 5),
+            (radius - radius // 3, diameter - radius // 4),
+        ]
+        pygame.draw.polygon(sprite, rock_fill, points)
+        pygame.draw.polygon(sprite, rock_outline, points, 2)
+        pygame.draw.line(
+            sprite,
+            rock_outline,
+            (radius - radius // 6, radius),
+            (radius + radius // 4, radius + radius // 6),
+            2,
+        )
+    elif kind == CreatureType.PAPER:
+        pad = max(2, radius // 4)
+        page = pygame.Rect(pad, pad, diameter - (2 * pad), diameter - (2 * pad))
+        pygame.draw.rect(sprite, (252, 252, 255), page, border_radius=3)
+        pygame.draw.rect(sprite, (95, 110, 135), page, 2, border_radius=3)
+        fold = [
+            (page.right - pad, page.top),
+            (page.right, page.top),
+            (page.right, page.top + pad),
+        ]
+        pygame.draw.polygon(sprite, (230, 236, 247), fold)
+        for idx in range(3):
+            y = page.top + pad + (idx * max(2, radius // 3))
+            pygame.draw.line(
+                sprite,
+                (160, 170, 195),
+                (page.left + pad // 2, y),
+                (page.right - pad, y),
+                1,
+            )
+    else:
+        blade = (220, 228, 240)
+        width = max(2, radius // 5)
+        pygame.draw.line(
+            sprite,
+            blade,
+            (radius // 3, radius // 3),
+            (diameter - radius // 3, diameter - radius // 3),
+            width,
+        )
+        pygame.draw.line(
+            sprite,
+            blade,
+            (radius // 3, diameter - radius // 3),
+            (diameter - radius // 3, radius // 3),
+            width,
+        )
+        handle_r = max(2, radius // 4)
+        handle_color = (205, 115, 80)
+        pygame.draw.circle(
+            sprite,
+            handle_color,
+            (radius - handle_r, radius + radius // 4),
+            handle_r,
+            2,
+        )
+        pygame.draw.circle(
+            sprite,
+            handle_color,
+            (radius + handle_r, radius + radius // 4),
+            handle_r,
+            2,
+        )
+
+    return sprite
+
+
+def _sprite_path(kind: CreatureType) -> Path:
+    return _SPRITE_DIR / f"{kind.value}.png"
+
+
+def _ensure_sprite_assets(radius: int) -> None:
+    _SPRITE_DIR.mkdir(parents=True, exist_ok=True)
+    for kind in CreatureType:
+        path = _sprite_path(kind)
+        # Keep default file sprites in sync with current built-in art.
+        pygame.image.save(_build_default_sprite(kind, radius), str(path))
+
+
+@lru_cache(maxsize=32)
+def _load_sprite(kind: CreatureType, radius: int) -> pygame.Surface:
+    _ensure_sprite_assets(radius)
+    sprite = pygame.image.load(str(_sprite_path(kind))).convert_alpha()
+    expected_size = radius * 2
+    if sprite.get_width() != expected_size or sprite.get_height() != expected_size:
+        sprite = pygame.transform.smoothscale(sprite, (expected_size, expected_size))
+    return sprite
 
 
 def _draw_creatures(screen: pygame.Surface, state: GameState, config: SimConfig) -> None:
-    padding = max(2, config.cell_size // 8)
-    size = config.cell_size - (padding * 2)
-
     for creature in state.creatures:
-        x = creature.pos.x * config.cell_size + padding
-        y = creature.pos.y * config.cell_size + padding
-        rect = pygame.Rect(x, y, size, size)
-        pygame.draw.rect(screen, _COLOR_BY_TYPE[creature.kind], rect)
+        sprite = _load_sprite(creature.kind, config.creature_radius)
+        center_x = int(creature.pos.x)
+        center_y = int(creature.pos.y)
+        top_left = (center_x - config.creature_radius, center_y - config.creature_radius)
+        screen.blit(sprite, top_left)
 
 
 def _draw_hud(screen: pygame.Surface, state: GameState) -> None:
@@ -50,6 +145,5 @@ def _draw_hud(screen: pygame.Surface, state: GameState) -> None:
 
 def draw_state(screen: pygame.Surface, state: GameState, config: SimConfig) -> None:
     screen.fill(_BG_COLOR)
-    _draw_grid(screen, config)
     _draw_creatures(screen, state, config)
     _draw_hud(screen, state)

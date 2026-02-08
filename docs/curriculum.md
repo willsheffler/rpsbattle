@@ -10,15 +10,25 @@ Use this as the single source of truth. Update it after each session.
 ## Current Focus
 - Phase: Foundations
 - Current target: Interactive 2D board with moving creatures
+- Current session update (2026-02-08): Kick off first playable game version with simple movement and RPS interactions.
 - Definition of done for this phase:
   - Board renders consistently.
   - Creatures move each tick.
   - Creature encounters resolve via RPS rules.
 
 ## Next Session Draft
-- Primary goal: Build a visible grid and basic creature movement.
-- Stretch goal: Add one encounter rule.
-- Jonah challenge: Change one simulation parameter and explain the result.
+- Primary goal: Use headless mode to run repeated simulations and measure win-rate patterns.
+- Stretch goal: Add `--headless-runs N` and print aggregate rock/paper/scissors wins.
+- Jonah challenge: Form a hypothesis, change one parameter (`--tps-multiplier`, speed range, or count), and explain how outcomes changed.
+- Next-session task list:
+  - Set exact creature amounts and starting positions.
+  - Make creatures bounce off each other.
+  - Stabilize config/CLI workflow.
+  - Tighten win detection.
+  - Add sound.
+  - Explore pathfinding/AI.
+  - Improve stats display.
+  - Add arena features/walls.
 
 ## Backlog
 Choose from this list each session based on interest and momentum.

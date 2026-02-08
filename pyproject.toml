@@ -18,4 +18,4 @@ pythonpath = ["src"]
 testpaths = ["tests"]
 
 [project.scripts]
-rpsbattle = "sim.app:run"
+rpsbattle = "sim.cli:main"

@@ -1,8 +1,15 @@
 import random
+import math
 
+import pytest
 from sim.board import Board, Position
 from sim.creature import Creature
-from sim.game import GameState, creature_counts, step_game
+from sim.game import (
+    GameState,
+    creature_counts,
+    randomize_creature_speeds,
+    step_game,
+)
 from sim.rps import CreatureType
 
 
@@ -23,6 +30,28 @@ def test_step_increments_tick() -> None:
     assert next_state.tick == 1
 
 
+def test_creature_bounces_off_right_wall() -> None:
+    state = GameState(
+        board=Board(width=5, height=5),
+        creatures=[
+            Creature(
+                id=1,
+                kind=CreatureType.ROCK,
+                pos=Position(4.5, 2.0),
+                vx=1.0,
+                vy=0.0,
+            )
+        ],
+        tick=0,
+    )
+
+    next_state = step_game(state, random.Random(1), dt_seconds=1.0)
+    creature = next_state.creatures[0]
+
+    assert creature.pos.x == 5
+    assert creature.vx == -1.0
+
+
 def test_encounter_resolves_types_on_shared_tile() -> None:
     state = GameState(
         board=Board(width=3, height=3),
@@ -34,6 +63,36 @@ def test_encounter_resolves_types_on_shared_tile() -> None:
     )
 
     next_state = step_game(state, StubRng())
+
+    assert [c.kind for c in next_state.creatures] == [CreatureType.ROCK, CreatureType.ROCK]
+
+
+def test_encounter_removes_loser_when_conversion_disabled() -> None:
+    state = GameState(
+        board=Board(width=3, height=3),
+        creatures=[
+            Creature(id=1, kind=CreatureType.ROCK, pos=Position(1, 1)),
+            Creature(id=2, kind=CreatureType.SCISSORS, pos=Position(1, 1)),
+        ],
+        tick=0,
+    )
+
+    next_state = step_game(state, StubRng(), convert_loser_to_winner=False)
+
+    assert [c.kind for c in next_state.creatures] == [CreatureType.ROCK]
+
+
+def test_encounter_tie_keeps_both_when_conversion_disabled() -> None:
+    state = GameState(
+        board=Board(width=3, height=3),
+        creatures=[
+            Creature(id=1, kind=CreatureType.ROCK, pos=Position(1, 1)),
+            Creature(id=2, kind=CreatureType.ROCK, pos=Position(1, 1)),
+        ],
+        tick=0,
+    )
+
+    next_state = step_game(state, StubRng(), convert_loser_to_winner=False)
 
     assert [c.kind for c in next_state.creatures] == [CreatureType.ROCK, CreatureType.ROCK]
 
@@ -53,3 +112,48 @@ def test_creature_counts() -> None:
     assert counts[CreatureType.ROCK] == 2
     assert counts[CreatureType.PAPER] == 1
     assert counts[CreatureType.SCISSORS] == 0
+
+
+def test_randomize_creature_speeds_changes_speed_and_keeps_direction() -> None:
+    creatures = [
+        Creature(
+            id=1,
+            kind=CreatureType.ROCK,
+            pos=Position(10.0, 10.0),
+            vx=3.0,
+            vy=4.0,  # direction angle atan2(4, 3)
+        ),
+        Creature(
+            id=2,
+            kind=CreatureType.PAPER,
+            pos=Position(20.0, 5.0),
+            vx=-4.0,
+            vy=3.0,
+        ),
+    ]
+
+    updated = randomize_creature_speeds(
+        creatures=creatures,
+        rng=random.Random(123),
+        min_speed=2.0,
+        max_speed=6.0,
+    )
+
+    assert len(updated) == len(creatures)
+    any_speed_changed = False
+    for original, new in zip(creatures, updated, strict=True):
+        assert new.id == original.id
+        assert new.kind == original.kind
+        assert new.pos == original.pos
+
+        original_speed = math.hypot(original.vx, original.vy)
+        new_speed = math.hypot(new.vx, new.vy)
+        assert 2.0 <= new_speed <= 6.0
+        if not math.isclose(new_speed, original_speed, rel_tol=0.0, abs_tol=1e-9):
+            any_speed_changed = True
+
+        original_angle = math.atan2(original.vy, original.vx)
+        new_angle = math.atan2(new.vy, new.vx)
+        assert new_angle == pytest.approx(original_angle, abs=1e-6)
+
+    assert any_speed_changed

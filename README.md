@@ -13,6 +13,29 @@ uv sync --dev
 uv run python main.py
 ```
 
+Optional examples:
+```bash
+# Disable loser conversion rule.
+uv run python main.py --no-convert
+
+# Faster game with more creatures.
+uv run python main.py --fps 12 --count 20
+
+# Customize speed randomization range (base speed * multipliers).
+uv run python main.py --speed 50 --min-speed-mult 0.8 --max-speed-mult 1.2
+
+# Speed up all simulation ticks globally.
+uv run python main.py --tps-multiplier 2.0
+
+# Headless mode (no window), prints winner.
+uv run python main.py --headless --max-ticks 20000
+```
+
+You can also run:
+```bash
+uv run rpsbattle --no-convert
+```
+
 3. Run tests:
 ```bash
 uv run pytest -q
