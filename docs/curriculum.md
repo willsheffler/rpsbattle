@@ -9,12 +9,12 @@ Use this as the single source of truth. Update it after each session.
 
 ## Current Focus
 - Phase: Foundations
-- Current target: Interactive 2D board with moving creatures
-- Current session update (2026-02-08): Kick off first playable game version with simple movement and RPS interactions.
+- Current target: Continuous 2D arena simulation with configurable encounter rules
+- Current session update (2026-02-08): Built a working continuous arena game with headless winner reporting and image sprites.
 - Definition of done for this phase:
-  - Board renders consistently.
-  - Creatures move each tick.
-  - Creature encounters resolve via RPS rules.
+  - Arena renders consistently.
+  - Creatures move each tick with delta-time updates.
+  - Creature encounters resolve via RPS rules in both convert and elimination modes.
 
 ## Next Session Draft
 - Primary goal: Use headless mode to run repeated simulations and measure win-rate patterns.
@@ -56,7 +56,7 @@ Choose from this list each session based on interest and momentum.
 ## Completed Milestones
 | Date | Milestone | Notes |
 |---|---|---|
-| YYYY-MM-DD | Example: Project scaffold created | Replace with real entries |
+| 2026-02-08 | First playable continuous arena build | Added movement smoothing, image sprites, screenshot key, speed controls, headless mode, and no-convert elimination behavior. |
 
 ## Session Update Routine (5-10 min)
 1. Create a new session log from `docs/session-logs/TEMPLATE.md`.

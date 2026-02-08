@@ -16,9 +16,9 @@
 - Strategy note: the biggest team does not always win, because it can wipe out prey and leave itself exposed to its predator with less danger.
 
 ## Jonah Learning Notes
-- New concept: To be filled during session.
-- What Jonah explained back: To be filled during session.
-- Where he got stuck: To be filled during session.
+- New concept: Delta-time movement (`dt_seconds`), config-driven toggles, and headless simulation mode.
+- What Jonah explained back: Why fixed frame-step movement is less stable and why seeded runs are useful for repeatable tests.
+- Where he got stuck: Minor CLI command syntax details (`uv run python main.py` vs `uv run main.py`) and restoring overwritten `cli.py`.
 
 ## Evidence
 - Commits:
@@ -31,9 +31,9 @@
   - `docs/curriculum.md`
 
 ## Verification
-- What we ran: Documentation update only.
-- What worked: Session tracking is initialized.
-- What did not work: N/A
+- What we ran: `uv run pytest -q`, `python main.py --help`, and headless smoke checks.
+- What worked: Continuous arena movement, sprite rendering, screenshot capture, headless winner reporting, and no-convert elimination behavior.
+- What did not work: `cli.py` was accidentally overwritten twice and restored during the session.
 
 ## Next Session
 - First task: Run 20+ headless simulations with fixed seeds and compare win rates for each type.
@@ -49,8 +49,8 @@
   - Add arena features/walls.
 
 ## Mentor Notes (Will)
-- Keep: To be filled during session.
-- Change: To be filled during session.
+- Keep: Fast build-test-learn loops and quiz checks during implementation.
+- Change: Lock `cli.py` options and add a simple checklist before commit to avoid accidental overwrites.
 
 ## Quiz Log
 - Q1: In our smoother movement update, what does `dt_seconds` represent in the game loop?
@@ -63,3 +63,5 @@
   - A4: "uv run main.py --no-convert" (close; runnable form is `uv run python main.py --no-convert`)
 - Q5: What does `--seed 42` change compared to leaving off `--seed`?
   - A5: "it would run seed 42 insead of a randdom seed"
+- Q6: If you want movement to look smoother without changing gameplay rules, which CLI option is the most direct one to increase?
+  - A6: Session ended before answer.
