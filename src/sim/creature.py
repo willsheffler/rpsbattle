@@ -1,0 +1,11 @@
+from dataclasses import dataclass
+
+from .board import Position
+from .rps import CreatureType
+
+
+@dataclass(frozen=True)
+class Creature:
+    id: int
+    kind: CreatureType
+    pos: Position
