@@ -21,8 +21,11 @@
 - Where he got stuck: To be filled during session.
 
 ## Evidence
-- Commits: Planned
-- Screenshots: Not planned
+- Commits:
+  - `4f219d3` feat: add headless winner mode, image sprites, TPS controls, and no-convert elimination rules
+- Screenshots:
+  - [Image #1] early arena state (tick 89)
+  - [Image #2] later arena state with sprite rendering (tick 365)
 - Files touched:
   - `docs/session-logs/2026-02-08-game-kickoff.md`
   - `docs/curriculum.md`
