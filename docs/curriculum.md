@@ -1,6 +1,13 @@
 # Living Curriculum
 
-Use this as the single source of truth. Update it after each session.
+Purpose: This is the project learning roadmap and pacing document.
+Use it as the single source of truth across sessions.
+
+Update cadence:
+- Update after each session.
+- Keep changes short and concrete.
+
+Last updated: 2026-02-14
 
 ## Program Goals
 - Teach Jonah core Python and simulation thinking through playful experiments.
@@ -9,7 +16,7 @@ Use this as the single source of truth. Update it after each session.
 
 ## Current Focus
 - Phase: Foundations
-- Current target: Continuous 2D arena simulation with configurable encounter rules
+- Current target: Continuous 2D arena simulation with configurable encounter rules.
 - Current session update (2026-02-08): Built a working continuous arena game with headless winner reporting and image sprites.
 - Definition of done for this phase:
   - Arena renders consistently.
@@ -19,12 +26,14 @@ Use this as the single source of truth. Update it after each session.
 ## Next Session Draft
 - Primary goal: Use headless mode to run repeated simulations and measure win-rate patterns.
 - Stretch goal: Add `--headless-runs N` and print aggregate rock/paper/scissors wins.
-- Jonah challenge: Form a hypothesis, change one parameter (`--tps-multiplier`, speed range, or count), and explain how outcomes changed.
+- Student challenge: Form a hypothesis, change one parameter (`--tps-multiplier`, speed range, or count), and explain how outcomes changed.
 - Next-session task list:
+  - Add `--headless-runs N` and aggregate win summary output.
+  - Add reproducibility reporting with explicit seed in outputs.
+  - Tighten win detection and end-of-run reporting.
+  - Add one focused stats display improvement.
   - Set exact creature amounts and starting positions.
   - Make creatures bounce off each other.
-  - Stabilize config/CLI workflow.
-  - Tighten win detection.
   - Add sound.
   - Explore pathfinding/AI.
   - Improve stats display.
@@ -34,6 +43,9 @@ Use this as the single source of truth. Update it after each session.
 Choose from this list each session based on interest and momentum.
 
 ### Ready Now
+- Add headless batch runs and aggregate results.
+- Add explicit seed/config echo in CLI output.
+- Add a small regression test for winner resolution behavior.
 - Create fixed-size board render.
 - Add simulation loop and tick counter.
 - Add creature state (x, y, type).
@@ -42,8 +54,8 @@ Choose from this list each session based on interest and momentum.
 - Add RPS winner/loser resolution.
 
 ### Next
-- Add HUD stats (counts of rock/paper/scissors).
-- Add reproducibility with random seed.
+- Improve HUD stats (counts, rates, and run summary).
+- Add one controlled experiment preset.
 - Add config file for board size and spawn count.
 - Add pause/step controls.
 
@@ -51,15 +63,12 @@ Choose from this list each session based on interest and momentum.
 - Add creature behavior variants (aggressive, avoidant, random).
 - Add food/resource mechanics.
 - Add reproduction and mutation experiments.
-- Add experiment presets and result comparison.
+- Add experiment preset comparison utilities.
 
 ## Completed Milestones
 | Date | Milestone | Notes |
 |---|---|---|
 | 2026-02-08 | First playable continuous arena build | Added movement smoothing, image sprites, screenshot key, speed controls, headless mode, and no-convert elimination behavior. |
 
-## Session Update Routine (5-10 min)
-1. Create a new session log from `docs/session-logs/TEMPLATE.md`.
-2. Add or reorder items in `Ready Now` based on today’s outcomes.
-3. Move finished items to `Completed Milestones`.
-4. Update `Next Session Draft` with one primary goal and one stretch goal.
+For update procedure, see:
+- `shared/sheffler_standards/docs/playbooks/session-management.md`

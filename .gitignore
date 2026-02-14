@@ -8,3 +8,9 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Synced shared standards
+shared/
+
+# Standards sync metadata
+.standards-last-sync
