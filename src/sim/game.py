@@ -1,7 +1,7 @@
 import math
 import random
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .board import Board, Position
 from .config import SimConfig
@@ -14,6 +14,7 @@ class GameState:
     board: Board
     creatures: list[Creature]
     tick: int = 0
+    active_collision_pairs: set[tuple[int, int]] = field(default_factory=set)
 
 
 def _spawn_creature(
@@ -95,6 +96,44 @@ def _within_distance(a: Creature, b: Creature, distance: float) -> bool:
     return (dx * dx) + (dy * dy) <= distance * distance
 
 
+def _pair_key(left_id: int, right_id: int) -> tuple[int, int]:
+    return (left_id, right_id) if left_id < right_id else (right_id, left_id)
+
+
+def mirror_vector(
+    mx: float,
+    my: float,
+    x: float,
+    y: float,
+) -> tuple[float, float]:
+    mirror_len_sq = (mx * mx) + (my * my)
+    if mirror_len_sq == 0.0:
+        return x, y
+
+    scale = ((x * mx) + (y * my)) / mirror_len_sq
+    parallel_x = scale * mx
+    parallel_y = scale * my
+    return (2.0 * parallel_x) - x, (2.0 * parallel_y) - y
+
+
+def bounce_velocity(
+    left_creature: Creature,
+    right_creature: Creature,
+) -> tuple[tuple[float, float], tuple[float, float]]:
+    mx = left_creature.pos.x - right_creature.pos.x
+    my = left_creature.pos.y - right_creature.pos.y
+    new_vleft = mirror_vector(mx, my, left_creature.vx, left_creature.vy)
+    new_vright = mirror_vector(mx, my, right_creature.vx, right_creature.vy)
+    new_vleft = -new_vleft[0], -new_vleft[1]
+    new_vright = -new_vright[0], -new_vright[1]
+    return (new_vleft, new_vright)
+    # TODO(Jonah): implement collision bounce math here.
+    #return (left_creature.vx, left_creature.vy), (right_creature.vx, right_creature.vy)
+    #return (-left_creature.vx, -left_creature.vy), (-right_creature.vx, -right_creature.vy)
+    #return (-right_creature.vx, -right_creature.vy), (-left_creature.vx, -left_creature.vy)
+    #return (right_creature.vx, right_creature.vy), (left_creature.vx, left_creature.vy)
+
+
 def step_game(
     state: GameState,
     rng: random.Random,
@@ -112,6 +151,7 @@ def step_game(
     creature_ids = sorted(by_id.keys())
 
     if not convert_loser_to_winner:
+        collisions_this_tick: set[tuple[int, int]] = set()
         alive_ids = set(creature_ids)
         for left_index, left_id in enumerate(creature_ids):
             if left_id not in alive_ids:
@@ -123,6 +163,30 @@ def step_game(
                 right = by_id[right_id]
                 if not _within_distance(left, right, encounter_distance):
                     continue
+
+                pair = _pair_key(left_id, right_id)
+                collisions_this_tick.add(pair)
+                if pair not in state.active_collision_pairs:
+                    (next_left_vx, next_left_vy), (next_right_vx, next_right_vy) = (
+                        bounce_velocity(
+                            left,
+                            right,
+                        )
+                    )
+                    by_id[left_id] = Creature(
+                        id=left.id,
+                        kind=left.kind,
+                        pos=left.pos,
+                        vx=next_left_vx,
+                        vy=next_left_vy,
+                    )
+                    by_id[right_id] = Creature(
+                        id=right.id,
+                        kind=right.kind,
+                        pos=right.pos,
+                        vx=next_right_vx,
+                        vy=next_right_vy,
+                    )
 
                 winner = rps_winner(left.kind, right.kind)
                 if winner is None:
@@ -136,12 +200,14 @@ def step_game(
         return GameState(
             board=state.board,
             creatures=sorted(
-                [c for c in moved_creatures if c.id in alive_ids],
+                [by_id[c.id] for c in moved_creatures if c.id in alive_ids],
                 key=lambda c: c.id,
             ),
             tick=state.tick + 1,
+            active_collision_pairs=collisions_this_tick,
         )
 
+    collisions_this_tick: set[tuple[int, int]] = set()
     kinds_by_id: dict[int, CreatureType] = {c.id: c.kind for c in moved_creatures}
 
     for left_index, left_id in enumerate(creature_ids):
@@ -150,6 +216,30 @@ def step_game(
             right = by_id[right_id]
             if not _within_distance(left, right, encounter_distance):
                 continue
+
+            pair = _pair_key(left_id, right_id)
+            collisions_this_tick.add(pair)
+            if pair not in state.active_collision_pairs:
+                (next_left_vx, next_left_vy), (next_right_vx, next_right_vy) = (
+                    bounce_velocity(
+                        left,
+                        right,
+                    )
+                )
+                by_id[left_id] = Creature(
+                    id=left.id,
+                    kind=left.kind,
+                    pos=left.pos,
+                    vx=next_left_vx,
+                    vy=next_left_vy,
+                )
+                by_id[right_id] = Creature(
+                    id=right.id,
+                    kind=right.kind,
+                    pos=right.pos,
+                    vx=next_right_vx,
+                    vy=next_right_vy,
+                )
 
             left_kind = kinds_by_id[left_id]
             right_kind = kinds_by_id[right_id]
@@ -166,9 +256,9 @@ def step_game(
         Creature(
             id=creature.id,
             kind=kinds_by_id[creature.id],
-            pos=creature.pos,
-            vx=creature.vx,
-            vy=creature.vy,
+            pos=by_id[creature.id].pos,
+            vx=by_id[creature.id].vx,
+            vy=by_id[creature.id].vy,
         )
         for creature in moved_creatures
     ]
@@ -177,6 +267,7 @@ def step_game(
         board=state.board,
         creatures=sorted(resolved, key=lambda c: c.id),
         tick=state.tick + 1,
+        active_collision_pairs=collisions_this_tick,
     )
 
 

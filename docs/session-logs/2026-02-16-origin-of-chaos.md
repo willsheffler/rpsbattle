@@ -7,10 +7,19 @@
 ## Note
 The 3 most recent screenshots are the beginning, middle, and end of our starting point of the program as it is now.
 
-## Observation Note
+## Observation 1
 At the start there is a mix, but in the middle scissors had the most. In the end rock won because the scissors killed all of the papers, so the rock could not be killed.
 
+### Corresponding Screenshots
+![Beginning state](assets/2026-02-16-starting-point/beginning.png)
+![Middle state](assets/2026-02-16-starting-point/middle.png)
+![End state](assets/2026-02-16-starting-point/end.png)
+
+## Observation 2
 Simulations go on a lot longer when the creatures bounce off each other due to the fact that they do not mix as well.
+
+### Corresponding Screenshot
+![Newest bounce state](assets/2026-02-16-starting-point/newest-bounce.png)
 
 ## Jonah Bounce Function And Diagram
 Jonah wrote the bounce mechanic function using mirror reflection and reversal.
@@ -32,7 +41,7 @@ def mirror_vector(
     return (2.0 * parallel_x) - x, (2.0 * parallel_y) - y
 
 
-def bounce_velocity_stencil(
+def bounce_velocity(
     left_creature: Creature,
     right_creature: Creature,
 ) -> tuple[tuple[float, float], tuple[float, float]]:
@@ -55,19 +64,6 @@ flowchart TD
     E --> G[Return two new velocity vectors]
     F --> G
 ```
-
-## Evidence
-### Beginning
-![Beginning state](assets/2026-02-16-starting-point/beginning.png)
-
-### Middle
-![Middle state](assets/2026-02-16-starting-point/middle.png)
-
-### End
-![End state](assets/2026-02-16-starting-point/end.png)
-
-### Newest Bounce Screenshot
-![Newest bounce state](assets/2026-02-16-starting-point/newest-bounce.png)
 
 ## Source Screenshot Files
 - `screenshots/rpsbattle-20260216-133120-881097.png`
