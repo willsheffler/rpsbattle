@@ -1,7 +1,7 @@
 # Session Log - 2026-02-16
 
 ## Session Info
-- Participants: Jonah
+- Participants: Jonah, Will, Codex
 - Focus: Record baseline state of the project with screenshots
 
 ## Note
