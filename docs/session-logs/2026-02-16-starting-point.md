@@ -7,6 +7,9 @@
 ## Note
 The 3 most recent screenshots are the beginning, middle, and end of our starting point of the program as it is now.
 
+## Observation Note
+At the start there is a mix, but in the middle scissors had the most. In the end rock won because the scissors killed all of the papers, so the rock could not be killed.
+
 ## Evidence
 ### Beginning
 ![Beginning state](assets/2026-02-16-starting-point/beginning.png)
