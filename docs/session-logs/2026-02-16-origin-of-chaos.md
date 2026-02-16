@@ -15,12 +15,6 @@ At the start there is a mix, but in the middle scissors had the most. In the end
 ![Middle state](assets/2026-02-16-starting-point/middle.png)
 ![End state](assets/2026-02-16-starting-point/end.png)
 
-## Observation 2
-Simulations go on a lot longer when the creatures bounce off each other due to the fact that they do not mix as well.
-
-### Corresponding Screenshot
-![Newest bounce state](assets/2026-02-16-starting-point/newest-bounce.png)
-
 ## Jonah Bounce Function And Diagram
 Jonah wrote the bounce mechanic function using mirror reflection and reversal.
 
@@ -64,6 +58,12 @@ flowchart TD
     E --> G[Return two new velocity vectors]
     F --> G
 ```
+
+## Observation 2
+Simulations go on a lot longer when the creatures bounce off each other due to the fact that they do not mix as well. The previous behavior allowed creatures to pass through each other, allowing them to mix more effectively.
+
+### Corresponding Screenshot
+![Newest bounce state](assets/2026-02-16-starting-point/newest-bounce.png)
 
 ## Source Screenshot Files
 - `screenshots/rpsbattle-20260216-133120-881097.png`
