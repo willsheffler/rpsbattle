@@ -70,3 +70,19 @@ flowchart TD
 - `screenshots/rpsbattle-20260216-133133-893626.png`
 - `screenshots/rpsbattle-20260216-133140-237537.png`
 - `screenshots/rpsbattle-20260216-143836-435335.png`
+
+## Quiz Log
+- Q1: What does `mirror_vector(mx, my, x, y)` return?
+  - A1: It mirrors the input vector x, y through the mirror vector mx, my and returns it.
+- Q2: In `bounce_velocity`, what are `mx` and `my` built from?
+  - A2: mx and my are built from subtracting the right_creature position from the left_creature position.
+- Q3: Why do we track `active_collision_pairs` in `GameState`?
+  - A3: We track active_collision_pairs to prevent multiple calls to the bounce function during a single collision.
+- Q4: If two creatures stay overlapped for 3 ticks, how many times should they bounce?
+  - A4: Once.
+- Q5: After two creatures separate and collide again later, should they bounce again?
+  - A5: Yes, they should.
+
+## Quiz Grade
+- Score: 5/5
+- Result: Excellent understanding of mirror-vector bounce math and collision-pair tracking behavior.
