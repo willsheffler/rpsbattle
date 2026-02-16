@@ -9,7 +9,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--height", type=int, default=30, help="Board height in cells.")
     parser.add_argument("--cell-size", type=int, default=32, help="Size of each cell in pixels.")
     parser.add_argument("--fps", type=int, default=120, help="Frames per second.")
-    parser.add_argument("--count", type=int, default=100, help="Number of creatures.")
+    parser.add_argument("--count", type=int, default=300, help="Number of creatures.")
     parser.add_argument(
         "--speed",
         type=float,
@@ -19,7 +19,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--min-speed-mult",
         type=float,
-        default=0.3,
+        default=0.5,
         help="Minimum speed multiplier for spawn randomization.",
     )
     parser.add_argument(

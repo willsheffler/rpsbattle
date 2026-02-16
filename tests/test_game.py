@@ -7,6 +7,7 @@ from sim.creature import Creature
 from sim.game import (
     GameState,
     creature_counts,
+    mirror_vector,
     randomize_creature_speeds,
     step_game,
 )
@@ -28,6 +29,13 @@ def test_step_increments_tick() -> None:
     next_state = step_game(state, random.Random(1))
 
     assert next_state.tick == 1
+
+
+def test_mirror_vector_reflects_across_axis() -> None:
+    mirrored_x, mirrored_y = mirror_vector(mx=0.0, my=1.0, x=3.0, y=4.0)
+
+    assert mirrored_x == pytest.approx(-3.0)
+    assert mirrored_y == pytest.approx(4.0)
 
 
 def test_creature_bounces_off_right_wall() -> None:
@@ -65,6 +73,56 @@ def test_encounter_resolves_types_on_shared_tile() -> None:
     next_state = step_game(state, StubRng())
 
     assert [c.kind for c in next_state.creatures] == [CreatureType.ROCK, CreatureType.ROCK]
+
+
+def test_collision_bounces_once_per_contact_and_resets_after_separation() -> None:
+    board = Board(width=10, height=10)
+    state = GameState(
+        board=board,
+        creatures=[
+            Creature(id=1, kind=CreatureType.ROCK, pos=Position(5, 5), vx=1.0, vy=0.0),
+            Creature(id=2, kind=CreatureType.ROCK, pos=Position(5, 5), vx=-2.0, vy=0.0),
+        ],
+        tick=0,
+    )
+
+    first = step_game(state, StubRng(), encounter_distance=1.0, dt_seconds=0.0)
+    assert first.creatures[0].vx == -1.0
+    assert first.creatures[1].vx == 2.0
+
+    second = step_game(first, StubRng(), encounter_distance=1.0, dt_seconds=0.0)
+    assert second.creatures[0].vx == -1.0
+    assert second.creatures[1].vx == 2.0
+    assert second.active_collision_pairs == {(1, 2)}
+
+    separated_state = GameState(
+        board=board,
+        creatures=[
+            Creature(id=1, kind=CreatureType.ROCK, pos=Position(0, 0), vx=-1.0, vy=0.0),
+            Creature(id=2, kind=CreatureType.ROCK, pos=Position(9, 9), vx=2.0, vy=0.0),
+        ],
+        tick=second.tick,
+        active_collision_pairs=second.active_collision_pairs,
+    )
+    separated = step_game(
+        separated_state, StubRng(), encounter_distance=1.0, dt_seconds=0.0
+    )
+    assert separated.active_collision_pairs == set()
+
+    recollide_state = GameState(
+        board=board,
+        creatures=[
+            Creature(id=1, kind=CreatureType.ROCK, pos=Position(5, 5), vx=-1.0, vy=0.0),
+            Creature(id=2, kind=CreatureType.ROCK, pos=Position(5, 5), vx=2.0, vy=0.0),
+        ],
+        tick=separated.tick,
+        active_collision_pairs=separated.active_collision_pairs,
+    )
+    recollide = step_game(
+        recollide_state, StubRng(), encounter_distance=1.0, dt_seconds=0.0
+    )
+    assert recollide.creatures[0].vx == 1.0
+    assert recollide.creatures[1].vx == -2.0
 
 
 def test_encounter_removes_loser_when_conversion_disabled() -> None:
