@@ -60,7 +60,7 @@ flowchart TD
 ```
 
 ## Observation 2
-Simulations go on a lot longer when the creatures bounce off each other due to the fact that they do not mix as well. The previous behavior allowed creatures to pass through each other, allowing them to mix more effectively.
+Simulations go on a lot longer when the creatures bounce off each other due to the fact that they do not mix as well. The previous behavior allowed creatures to pass through each other, allowing them to mix more effectively. \(Will: in the final screenshot from observation 1 without bouncing, at 2431 ticks the sim was all rock and had been for a while. in the screenshot here, at tick 3751 there is still a good mix\)
 
 ### Corresponding Screenshot
 ![Newest bounce state](assets/2026-02-16-starting-point/newest-bounce.png)
