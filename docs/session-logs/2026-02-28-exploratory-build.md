@@ -4,6 +4,7 @@
 - Duration: 1 hour
 - Participants: Will and Jonah
 - Focus: Exploratory build session to add new working features
+- Status: Completed on 2026-02-28
 
 ## Plan For Today
 - Primary goal: Add something new to the simulation that works end to end.
@@ -48,7 +49,8 @@
   - Random obstacles are useful because they make rounds different and more interesting; safe spawning is a separate benefit.
 
 ## Evidence
-- Commits: TBD
+- Commits:
+  - `01d231a` - Add simulation controls and obstacle upgrades
 - Screenshots:
   - `screenshots/rpsbattle-20260228-164221-913172.png` - ending menu
   - `screenshots/rpsbattle-20260228-164227-522043.png` - start of final simulation
@@ -77,7 +79,7 @@
 - What worked: The final graphical flow supports setup, restart, screenshots, obstacle variation, mass-based growth, mass-based bounce, and a visible win screen. Final verification passed with `31` tests.
 - What did not work: A sandboxed `uv` test run could not use the default cache directory, so final pytest verification was rerun with approval.
 
-## Next Step In This Session
+## Next Session Ideas
 - Add one or two smaller polish features instead of another large simulation rule.
 - Best next options: a `Play Again` button on the win screen, a scoreboard across rounds, or better HUD/debug labels for mass and settings.
 

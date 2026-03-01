@@ -7,7 +7,7 @@ Update cadence:
 - Update after each session.
 - Keep changes short and concrete.
 
-Last updated: 2026-02-28
+Last updated: 2026-03-01
 
 ## Program Goals
 - Teach Jonah core Python and simulation thinking through playful experiments.
@@ -16,8 +16,8 @@ Last updated: 2026-02-28
 
 ## Current Focus
 - Phase: Foundations
-- Current target: Continuous 2D arena simulation with configurable encounter rules.
-- Current session update (2026-02-28): Session started with Will and Jonah for a 1-hour exploratory build. Immediate task is to choose one small feature that can be completed, verified, and documented in the session log.
+- Current target: Continuous 2D arena simulation with configurable encounter rules, obstacle variation, and clearer in-app controls.
+- Current session update (2026-02-28): Completed a 1-hour exploratory build with Will and Jonah. The sim now has a settings menu, restart flow, screenshots from menu and gameplay, random non-overlapping obstacles, mass-based growth and bounce, and a working win screen.
 - Current session update (2026-02-08): Built a working continuous arena game with headless winner reporting and image sprites.
 - Definition of done for this phase:
   - Arena renders consistently.
@@ -25,21 +25,18 @@ Last updated: 2026-02-28
   - Creature encounters resolve via RPS rules in both convert and elimination modes.
 
 ## Next Session Draft
-- Primary goal: Finish the current exploratory build by choosing and landing one concrete feature.
-- Stretch goal: If time allows, add one measurable experiment or stats improvement after the first feature works.
+- Primary goal: Add one polish feature that improves repeat play or observation without changing the core simulation too much.
+- Stretch goal: Add one measurable experiment or stats improvement after the first polish feature works.
 - Student challenge: Make a prediction before changing the simulation, then explain whether the result matched the prediction.
 - Next-session task list:
-  - Choose one concrete feature at session start instead of keeping the goal broad.
+  - Add a `Play Again` button on the win screen.
+  - Add a scoreboard across rounds.
+  - Add better HUD/debug labels for mass and current settings.
   - Add `--headless-runs N` and aggregate win summary output.
   - Add reproducibility reporting with explicit seed in outputs.
-  - Tighten win detection and end-of-run reporting.
   - Add one focused stats display improvement.
-  - Set exact creature amounts and starting positions.
-  - Make creatures bounce off each other.
   - Add sound.
   - Explore pathfinding/AI.
-  - Improve stats display.
-  - Add arena features/walls.
 
 ## Backlog
 Choose from this list each session based on interest and momentum.
@@ -71,6 +68,7 @@ Choose from this list each session based on interest and momentum.
 | Date | Milestone | Notes |
 |---|---|---|
 | 2026-02-08 | First playable continuous arena build | Added movement smoothing, image sprites, screenshot key, speed controls, headless mode, and no-convert elimination behavior. |
+| 2026-02-28 | Exploratory controls and obstacle upgrade session | Added menu controls, restart flow, random obstacle variations, mass-based growth and bounce, screenshot capture in menu/game, and a live win screen. |
 
 For update procedure, see:
 - `shared/sheffler_standards/docs/playbooks/session-management.md`
