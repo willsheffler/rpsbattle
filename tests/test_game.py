@@ -1,11 +1,12 @@
-import random
 import math
+import random
 
 import pytest
-from sim.board import Board, Position
+from sim.board import Board, Obstacle, Position
 from sim.creature import Creature
 from sim.game import (
     GameState,
+    create_game,
     creature_counts,
     mirror_vector,
     randomize_creature_speeds,
@@ -123,6 +124,273 @@ def test_collision_bounces_once_per_contact_and_resets_after_separation() -> Non
     )
     assert recollide.creatures[0].vx == 1.0
     assert recollide.creatures[1].vx == -2.0
+
+
+def test_collision_does_not_bounce_when_disabled() -> None:
+    state = GameState(
+        board=Board(width=10, height=10),
+        creatures=[
+            Creature(id=1, kind=CreatureType.ROCK, pos=Position(5, 5), vx=1.0, vy=0.0),
+            Creature(id=2, kind=CreatureType.ROCK, pos=Position(5, 5), vx=-2.0, vy=0.0),
+        ],
+        tick=0,
+    )
+
+    next_state = step_game(
+        state,
+        StubRng(),
+        bounce_off_creatures=False,
+        encounter_distance=1.0,
+        dt_seconds=0.0,
+    )
+
+    assert next_state.creatures[0].vx == 1.0
+    assert next_state.creatures[1].vx == -2.0
+    assert next_state.active_collision_pairs == set()
+
+
+def test_heavier_creature_changes_velocity_less_on_bounce() -> None:
+    state = GameState(
+        board=Board(width=20, height=20),
+        creatures=[
+            Creature(id=1, kind=CreatureType.ROCK, pos=Position(10, 10), vx=2.0, vy=0.0, mass=10.0),
+            Creature(id=2, kind=CreatureType.ROCK, pos=Position(10, 10), vx=-2.0, vy=0.0, mass=2.0),
+        ],
+        tick=0,
+    )
+
+    next_state = step_game(state, StubRng(), encounter_distance=1.0, dt_seconds=0.0)
+
+    heavy = next_state.creatures[0]
+    light = next_state.creatures[1]
+    assert heavy.vx < 2.0
+    assert heavy.vx > -2.0
+    assert light.vx == pytest.approx(2.0)
+
+
+def test_creatures_do_not_encounter_when_only_round_bounds_overlap() -> None:
+    state = GameState(
+        board=Board(width=100, height=100),
+        creatures=[
+            Creature(id=1, kind=CreatureType.PAPER, pos=Position(20, 20), radius=20),
+            Creature(id=2, kind=CreatureType.ROCK, pos=Position(51, 51), radius=20),
+        ],
+    )
+
+    next_state = step_game(state, StubRng(), dt_seconds=0.0)
+
+    assert [creature.kind for creature in next_state.creatures] == [
+        CreatureType.PAPER,
+        CreatureType.ROCK,
+    ]
+
+
+def test_winner_grows_when_conversion_enabled() -> None:
+    state = GameState(
+        board=Board(width=10, height=10),
+        creatures=[
+            Creature(id=1, kind=CreatureType.ROCK, pos=Position(5, 5), radius=20, mass=20),
+            Creature(id=2, kind=CreatureType.SCISSORS, pos=Position(5, 5), radius=20, mass=7),
+        ],
+    )
+
+    next_state = step_game(
+        state,
+        StubRng(),
+        grow_on_win=True,
+    )
+
+    assert next_state.creatures[0].radius == 27.0
+    assert next_state.creatures[0].mass == 27.0
+    assert next_state.creatures[1].radius == 20.0
+
+
+def test_winner_grows_when_elimination_enabled() -> None:
+    state = GameState(
+        board=Board(width=10, height=10),
+        creatures=[
+            Creature(id=1, kind=CreatureType.ROCK, pos=Position(5, 5), radius=20, mass=20),
+            Creature(id=2, kind=CreatureType.SCISSORS, pos=Position(5, 5), radius=20, mass=5),
+        ],
+    )
+
+    next_state = step_game(
+        state,
+        StubRng(),
+        convert_loser_to_winner=False,
+        grow_on_win=True,
+    )
+
+    assert len(next_state.creatures) == 1
+    assert next_state.creatures[0].radius == 25.0
+    assert next_state.creatures[0].mass == 25.0
+
+
+def test_create_game_gives_creatures_starting_mass() -> None:
+    from sim.config import SimConfig
+
+    config = SimConfig(creature_count=4, creature_radius=9, creature_mass=12.0, random_seed=3)
+
+    state = create_game(config)
+
+    assert all(creature.mass == 12.0 for creature in state.creatures)
+
+
+def test_create_game_spawns_requested_obstacles() -> None:
+    from sim.config import SimConfig
+
+    config = SimConfig(
+        board_width=10,
+        board_height=8,
+        cell_size=10,
+        creature_count=0,
+        random_seed=7,
+        obstacle_count=8,
+        obstacle_avg_size=12.0,
+    )
+
+    state = create_game(config)
+
+    assert len(state.obstacles) > 0
+    for obstacle in state.obstacles:
+        assert obstacle.kind in {"circle", "square", "triangle"}
+        assert 7.2 <= obstacle.size <= 16.8
+        assert 0.0 <= obstacle.rotation <= math.tau
+        assert len(obstacle.color) == 3
+        assert obstacle.size <= obstacle.pos.x <= (config.window_width - obstacle.size)
+        assert obstacle.size <= obstacle.pos.y <= (config.window_height - obstacle.size)
+
+
+def test_create_game_spawns_non_overlapping_obstacles() -> None:
+    from sim.config import SimConfig
+
+    config = SimConfig(
+        board_width=20,
+        board_height=16,
+        cell_size=10,
+        creature_count=0,
+        random_seed=21,
+        obstacle_count=10,
+        obstacle_avg_size=10.0,
+    )
+
+    state = create_game(config)
+
+    for index, obstacle in enumerate(state.obstacles):
+        for other in state.obstacles[index + 1 :]:
+            dx = obstacle.pos.x - other.pos.x
+            dy = obstacle.pos.y - other.pos.y
+            min_distance = obstacle.collision_radius + other.collision_radius
+            assert (dx * dx) + (dy * dy) >= min_distance * min_distance
+
+
+def test_create_game_spawns_creatures_away_from_walls() -> None:
+    from sim.config import SimConfig
+
+    config = SimConfig(
+        board_width=12,
+        board_height=9,
+        cell_size=10,
+        creature_count=20,
+        creature_radius=6,
+        random_seed=11,
+    )
+
+    state = create_game(config)
+
+    for creature in state.creatures:
+        assert config.creature_radius <= creature.pos.x <= (
+            config.window_width - config.creature_radius
+        )
+        assert config.creature_radius <= creature.pos.y <= (
+            config.window_height - config.creature_radius
+        )
+
+
+def test_create_game_spawns_creatures_outside_obstacles() -> None:
+    from sim.config import SimConfig
+
+    config = SimConfig(
+        board_width=16,
+        board_height=12,
+        cell_size=10,
+        creature_count=10,
+        creature_radius=6,
+        random_seed=13,
+        obstacle_count=2,
+        obstacle_avg_size=18,
+    )
+
+    state = create_game(config)
+
+    for creature in state.creatures:
+        for obstacle in state.obstacles:
+            dx = creature.pos.x - obstacle.pos.x
+            dy = creature.pos.y - obstacle.pos.y
+            min_distance = config.creature_radius + obstacle.collision_radius
+            assert (dx * dx) + (dy * dy) >= min_distance * min_distance
+
+
+def test_creature_bounces_off_obstacle() -> None:
+    state = GameState(
+        board=Board(width=20, height=20),
+        creatures=[
+            Creature(id=1, kind=CreatureType.ROCK, pos=Position(4, 10), vx=3.0, vy=0.0)
+        ],
+        obstacles=[
+            Obstacle(
+                kind="circle",
+                pos=Position(10, 10),
+                size=2.0,
+                rotation=0.0,
+                color=(120, 125, 135),
+            )
+        ],
+        tick=0,
+    )
+
+    next_state = step_game(
+        state,
+        StubRng(),
+        creature_radius=2.0,
+        encounter_distance=1.0,
+        dt_seconds=1.0,
+    )
+
+    creature = next_state.creatures[0]
+    assert creature.vx == pytest.approx(-3.0)
+    assert creature.vy == pytest.approx(0.0)
+    assert creature.pos.x == pytest.approx(6.0)
+    assert creature.pos.y == pytest.approx(10.0)
+
+
+def test_creature_bounces_off_square_obstacle_corner() -> None:
+    state = GameState(
+        board=Board(width=40, height=40),
+        creatures=[
+            Creature(id=1, kind=CreatureType.PAPER, pos=Position(15.2, 15.2), vx=2.0, vy=2.0, radius=4.0)
+        ],
+        obstacles=[
+            Obstacle(
+                kind="square",
+                pos=Position(10, 10),
+                size=4.0,
+                rotation=0.0,
+                color=(120, 125, 135),
+            )
+        ],
+        tick=0,
+    )
+
+    next_state = step_game(
+        state,
+        StubRng(),
+        dt_seconds=0.0,
+    )
+
+    creature = next_state.creatures[0]
+    assert creature.vx < 0.0
+    assert creature.vy < 0.0
 
 
 def test_encounter_removes_loser_when_conversion_disabled() -> None:

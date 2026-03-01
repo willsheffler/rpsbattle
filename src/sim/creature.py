@@ -11,3 +11,5 @@ class Creature:
     pos: Position
     vx: float = 0.0
     vy: float = 0.0
+    radius: float = 0.0
+    mass: float = 1.0

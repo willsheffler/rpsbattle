@@ -13,10 +13,22 @@ uv sync --dev
 uv run python main.py
 ```
 
+The graphical app now opens with a start screen before the simulation begins.
+Use the buttons to change a few starting variables, then click `Start Simulation`.
+
 Optional examples:
 ```bash
 # Disable loser conversion rule.
 uv run python main.py --no-convert
+
+# Disable creature-to-creature bounce.
+uv run python main.py --no-bounce
+
+# Spawn random obstacle shapes with average size 36.
+uv run python main.py --obstacle-count 5 --obstacle-avg-size 36
+
+# Make winners grow by the loser's mass.
+uv run python main.py --grow-on-win
 
 # Faster game with more creatures.
 uv run python main.py --fps 12 --count 20

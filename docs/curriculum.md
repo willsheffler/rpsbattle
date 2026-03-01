@@ -7,7 +7,7 @@ Update cadence:
 - Update after each session.
 - Keep changes short and concrete.
 
-Last updated: 2026-02-14
+Last updated: 2026-02-28
 
 ## Program Goals
 - Teach Jonah core Python and simulation thinking through playful experiments.
@@ -17,6 +17,7 @@ Last updated: 2026-02-14
 ## Current Focus
 - Phase: Foundations
 - Current target: Continuous 2D arena simulation with configurable encounter rules.
+- Current session update (2026-02-28): Session started with Will and Jonah for a 1-hour exploratory build. Immediate task is to choose one small feature that can be completed, verified, and documented in the session log.
 - Current session update (2026-02-08): Built a working continuous arena game with headless winner reporting and image sprites.
 - Definition of done for this phase:
   - Arena renders consistently.
@@ -24,10 +25,11 @@ Last updated: 2026-02-14
   - Creature encounters resolve via RPS rules in both convert and elimination modes.
 
 ## Next Session Draft
-- Primary goal: Use headless mode to run repeated simulations and measure win-rate patterns.
-- Stretch goal: Add `--headless-runs N` and print aggregate rock/paper/scissors wins.
-- Student challenge: Form a hypothesis, change one parameter (`--tps-multiplier`, speed range, or count), and explain how outcomes changed.
+- Primary goal: Finish the current exploratory build by choosing and landing one concrete feature.
+- Stretch goal: If time allows, add one measurable experiment or stats improvement after the first feature works.
+- Student challenge: Make a prediction before changing the simulation, then explain whether the result matched the prediction.
 - Next-session task list:
+  - Choose one concrete feature at session start instead of keeping the goal broad.
   - Add `--headless-runs N` and aggregate win summary output.
   - Add reproducibility reporting with explicit seed in outputs.
   - Tighten win detection and end-of-run reporting.

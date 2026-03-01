@@ -8,6 +8,19 @@ class Position:
 
 
 @dataclass(frozen=True)
+class Obstacle:
+    kind: str
+    pos: Position
+    size: float
+    rotation: float
+    color: tuple[int, int, int]
+
+    @property
+    def collision_radius(self) -> float:
+        return self.size
+
+
+@dataclass(frozen=True)
 class Board:
     width: float
     height: float

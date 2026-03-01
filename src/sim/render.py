@@ -1,10 +1,12 @@
 from functools import lru_cache
+import math
 from pathlib import Path
 
 import pygame
 
 from .config import SimConfig
-from .game import GameState, creature_counts
+from .game import GameState, _creature_primitives, _obstacle_primitives, creature_counts
+from .geometry import Capsule, Circle, Polygon
 from .rps import CreatureType
 
 _BG_COLOR = (240, 243, 247)
@@ -15,6 +17,8 @@ _COLOR_BY_TYPE = {
 }
 _TEXT_COLOR = (25, 30, 40)
 _SPRITE_DIR = Path("assets/sprites")
+_DEBUG_CREATURE_COLOR = (255, 140, 60)
+_DEBUG_OBSTACLE_COLOR = (80, 20, 20)
 
 
 def _build_default_sprite(kind: CreatureType, radius: int) -> pygame.Surface:
@@ -123,11 +127,54 @@ def _load_sprite(kind: CreatureType, radius: int) -> pygame.Surface:
 
 def _draw_creatures(screen: pygame.Surface, state: GameState, config: SimConfig) -> None:
     for creature in state.creatures:
-        sprite = _load_sprite(creature.kind, config.creature_radius)
+        radius = max(1, int(round(creature.radius)))
+        sprite = _load_sprite(creature.kind, radius)
         center_x = int(creature.pos.x)
         center_y = int(creature.pos.y)
-        top_left = (center_x - config.creature_radius, center_y - config.creature_radius)
+        top_left = (center_x - radius, center_y - radius)
         screen.blit(sprite, top_left)
+
+
+def _draw_obstacles(screen: pygame.Surface, state: GameState) -> None:
+    for obstacle in state.obstacles:
+        center = (int(obstacle.pos.x), int(obstacle.pos.y))
+        size = max(6, int(round(obstacle.size)))
+        fill = obstacle.color
+        outline = (70, 75, 85)
+        if obstacle.kind == "square":
+            points = [
+                (-size, -size),
+                (size, -size),
+                (size, size),
+                (-size, size),
+            ]
+            rotated = []
+            cos_angle = math.cos(obstacle.rotation)
+            sin_angle = math.sin(obstacle.rotation)
+            for x, y in points:
+                rx = (x * cos_angle) - (y * sin_angle)
+                ry = (x * sin_angle) + (y * cos_angle)
+                rotated.append((int(round(center[0] + rx)), int(round(center[1] + ry))))
+            pygame.draw.polygon(screen, fill, rotated)
+            pygame.draw.polygon(screen, outline, rotated, 3)
+        elif obstacle.kind == "triangle":
+            points = [
+                (0, -size),
+                (-size, size),
+                (size, size),
+            ]
+            rotated = []
+            cos_angle = math.cos(obstacle.rotation)
+            sin_angle = math.sin(obstacle.rotation)
+            for x, y in points:
+                rx = (x * cos_angle) - (y * sin_angle)
+                ry = (x * sin_angle) + (y * cos_angle)
+                rotated.append((int(round(center[0] + rx)), int(round(center[1] + ry))))
+            pygame.draw.polygon(screen, fill, rotated)
+            pygame.draw.polygon(screen, outline, rotated, 3)
+        else:
+            pygame.draw.circle(screen, fill, center, size)
+            pygame.draw.circle(screen, outline, center, size, 3)
 
 
 def _draw_hud(screen: pygame.Surface, state: GameState) -> None:
@@ -143,7 +190,53 @@ def _draw_hud(screen: pygame.Surface, state: GameState) -> None:
     screen.blit(text_surface, (8, 8))
 
 
-def draw_state(screen: pygame.Surface, state: GameState, config: SimConfig) -> None:
+def _draw_debug_primitive(
+    screen: pygame.Surface,
+    primitive: Circle | Capsule | Polygon,
+    color: tuple[int, int, int],
+) -> None:
+    if isinstance(primitive, Circle):
+        pygame.draw.circle(
+            screen,
+            color,
+            (int(primitive.center.x), int(primitive.center.y)),
+            int(round(primitive.radius)),
+            1,
+        )
+        return
+
+    if isinstance(primitive, Capsule):
+        start = (int(round(primitive.start.x)), int(round(primitive.start.y)))
+        end = (int(round(primitive.end.x)), int(round(primitive.end.y)))
+        width = max(1, int(round(primitive.radius * 2)))
+        pygame.draw.line(screen, color, start, end, width)
+        pygame.draw.circle(screen, color, start, int(round(primitive.radius)), 1)
+        pygame.draw.circle(screen, color, end, int(round(primitive.radius)), 1)
+        return
+
+    points = [(int(round(vertex.x)), int(round(vertex.y))) for vertex in primitive.vertices]
+    pygame.draw.polygon(screen, color, points, 1)
+
+
+def _draw_debug_boundaries(screen: pygame.Surface, state: GameState) -> None:
+    for obstacle in state.obstacles:
+        for primitive in _obstacle_primitives(obstacle):
+            _draw_debug_primitive(screen, primitive, _DEBUG_OBSTACLE_COLOR)
+
+    for creature in state.creatures:
+        for primitive in _creature_primitives(creature):
+            _draw_debug_primitive(screen, primitive, _DEBUG_CREATURE_COLOR)
+
+
+def draw_state(
+    screen: pygame.Surface,
+    state: GameState,
+    config: SimConfig,
+    show_debug_boundaries: bool = False,
+) -> None:
     screen.fill(_BG_COLOR)
+    _draw_obstacles(screen, state)
     _draw_creatures(screen, state, config)
+    if show_debug_boundaries:
+        _draw_debug_boundaries(screen, state)
     _draw_hud(screen, state)
