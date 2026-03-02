@@ -1,6 +1,7 @@
 from sim.app import (
     _adjust_menu_value,
     _click_hits_restart,
+    _cycle_menu_value,
     _restart_button_rect,
     _toggle_menu_value,
     run_headless,
@@ -57,17 +58,20 @@ def test_adjust_menu_value_changes_numeric_fields() -> None:
         obstacle_count=2,
         obstacle_avg_size=40.0,
         creature_mass=20.0,
+        winner_growth_percent=100.0,
     )
 
     updated = _adjust_menu_value(config, "creature_count", 10)
     updated = _adjust_menu_value(updated, "obstacle_count", -1)
     updated = _adjust_menu_value(updated, "obstacle_avg_size", 8.0)
     updated = _adjust_menu_value(updated, "creature_mass", 2.0)
+    updated = _adjust_menu_value(updated, "winner_growth_percent", -30.0)
 
     assert updated.creature_count == 30
     assert updated.obstacle_count == 1
     assert updated.obstacle_avg_size == 48.0
     assert updated.creature_mass == 22.0
+    assert updated.winner_growth_percent == 70.0
 
 
 def test_toggle_menu_value_flips_boolean_fields() -> None:
@@ -75,15 +79,26 @@ def test_toggle_menu_value_flips_boolean_fields() -> None:
         bounce_off_creatures=True,
         convert_loser_to_winner=True,
         grow_on_win=False,
+        custom_outcome_enabled=True,
     )
 
     updated = _toggle_menu_value(config, "bounce_off_creatures")
     updated = _toggle_menu_value(updated, "convert_loser_to_winner")
     updated = _toggle_menu_value(updated, "grow_on_win")
+    updated = _toggle_menu_value(updated, "custom_outcome_enabled")
 
     assert updated.bounce_off_creatures is False
     assert updated.convert_loser_to_winner is False
     assert updated.grow_on_win is True
+    assert updated.custom_outcome_enabled is False
+
+
+def test_cycle_menu_value_advances_battle_rules() -> None:
+    config = SimConfig(battle_rule_set="classic")
+
+    updated = _cycle_menu_value(config, "battle_rule_set")
+
+    assert updated.battle_rule_set == "reverse"
 
 
 def test_restart_button_rect_stays_in_top_right() -> None:

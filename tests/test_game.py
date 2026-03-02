@@ -2,6 +2,7 @@ import math
 import random
 
 import pytest
+import sim.game as game_module
 from sim.board import Board, Obstacle, Position
 from sim.creature import Creature
 from sim.game import (
@@ -12,7 +13,7 @@ from sim.game import (
     randomize_creature_speeds,
     step_game,
 )
-from sim.rps import CreatureType
+from sim.rps import CreatureType, battle_rules_for
 
 
 class StubRng:
@@ -74,6 +75,55 @@ def test_encounter_resolves_types_on_shared_tile() -> None:
     next_state = step_game(state, StubRng())
 
     assert [c.kind for c in next_state.creatures] == [CreatureType.ROCK, CreatureType.ROCK]
+
+
+def test_encounter_can_use_reverse_rules() -> None:
+    state = GameState(
+        board=Board(width=3, height=3),
+        creatures=[
+            Creature(id=1, kind=CreatureType.ROCK, pos=Position(1, 1)),
+            Creature(id=2, kind=CreatureType.SCISSORS, pos=Position(1, 1)),
+        ],
+        tick=0,
+    )
+
+    next_state = step_game(
+        state,
+        StubRng(),
+        battle_rules=battle_rules_for("reverse"),
+    )
+
+    assert [c.kind for c in next_state.creatures] == [
+        CreatureType.SCISSORS,
+        CreatureType.SCISSORS,
+    ]
+
+
+def test_custom_interaction_can_override_default_rules(monkeypatch: pytest.MonkeyPatch) -> None:
+    state = GameState(
+        board=Board(width=3, height=3),
+        creatures=[
+            Creature(id=1, kind=CreatureType.ROCK, pos=Position(1, 1)),
+            Creature(id=2, kind=CreatureType.SCISSORS, pos=Position(1, 1)),
+        ],
+        tick=0,
+    )
+
+    def force_left_to_win(
+        left: Creature,
+        right: Creature,
+    ) -> CreatureType | None:
+        del right
+        return left.kind
+
+    monkeypatch.setattr(game_module, "custom_winner", force_left_to_win)
+
+    next_state = step_game(state, StubRng())
+
+    assert [c.kind for c in next_state.creatures] == [
+        CreatureType.ROCK,
+        CreatureType.ROCK,
+    ]
 
 
 def test_collision_bounces_once_per_contact_and_resets_after_separation() -> None:
@@ -198,10 +248,11 @@ def test_winner_grows_when_conversion_enabled() -> None:
         state,
         StubRng(),
         grow_on_win=True,
+        winner_growth_percent=50.0,
     )
 
-    assert next_state.creatures[0].radius == 27.0
-    assert next_state.creatures[0].mass == 27.0
+    assert next_state.creatures[0].radius == 23.5
+    assert next_state.creatures[0].mass == 23.5
     assert next_state.creatures[1].radius == 20.0
 
 
@@ -219,11 +270,12 @@ def test_winner_grows_when_elimination_enabled() -> None:
         StubRng(),
         convert_loser_to_winner=False,
         grow_on_win=True,
+        winner_growth_percent=40.0,
     )
 
     assert len(next_state.creatures) == 1
-    assert next_state.creatures[0].radius == 25.0
-    assert next_state.creatures[0].mass == 25.0
+    assert next_state.creatures[0].radius == 22.0
+    assert next_state.creatures[0].mass == 22.0
 
 
 def test_create_game_gives_creatures_starting_mass() -> None:

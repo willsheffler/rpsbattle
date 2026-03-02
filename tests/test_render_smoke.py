@@ -44,3 +44,19 @@ def test_draw_state_with_debug_boundaries_smoke() -> None:
         assert screen.get_size() == (config.window_width, config.window_height)
     finally:
         pygame.quit()
+
+
+def test_draw_state_with_mass_labels_smoke() -> None:
+    os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+    pygame.init()
+    try:
+        config = SimConfig(board_width=6, board_height=4, cell_size=16, creature_count=5)
+        screen = pygame.display.set_mode((config.window_width, config.window_height))
+        state = create_game(config)
+
+        draw_state(screen, state, config, show_mass_labels=True)
+        pygame.display.flip()
+
+        assert screen.get_size() == (config.window_width, config.window_height)
+    finally:
+        pygame.quit()

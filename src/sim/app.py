@@ -5,7 +5,7 @@ import random
 
 from .config import SimConfig
 from .game import create_game, creature_counts, step_game
-from .rps import CreatureType
+from .rps import RULESETS, CreatureType, battle_rules_for
 
 
 def winner_kind_or_none(state) -> CreatureType | None:
@@ -63,6 +63,11 @@ def _adjust_menu_value(config: SimConfig, field_name: str, delta: int | float) -
             config,
             creature_speed=max(1.0, config.creature_speed + float(delta)),
         )
+    if field_name == "winner_growth_percent":
+        return replace(
+            config,
+            winner_growth_percent=max(0.0, config.winner_growth_percent + float(delta)),
+        )
     raise ValueError(f"Unknown menu field: {field_name}")
 
 
@@ -76,6 +81,17 @@ def _toggle_menu_value(config: SimConfig, field_name: str) -> SimConfig:
         )
     if field_name == "grow_on_win":
         return replace(config, grow_on_win=not config.grow_on_win)
+    if field_name == "custom_outcome_enabled":
+        return replace(config, custom_outcome_enabled=not config.custom_outcome_enabled)
+    raise ValueError(f"Unknown menu field: {field_name}")
+
+
+def _cycle_menu_value(config: SimConfig, field_name: str) -> SimConfig:
+    if field_name == "battle_rule_set":
+        rule_names = sorted(RULESETS)
+        current_index = rule_names.index(config.battle_rule_set)
+        next_index = (current_index + 1) % len(rule_names)
+        return replace(config, battle_rule_set=rule_names[next_index])
     raise ValueError(f"Unknown menu field: {field_name}")
 
 
@@ -145,6 +161,12 @@ def _run_start_menu(screen, config: SimConfig) -> SimConfig | None:
                 "creature_speed",
                 5.0,
             ),
+            (
+                "Growth Percent",
+                f"{current_config.winner_growth_percent:.0f}%",
+                "winner_growth_percent",
+                10.0,
+            ),
         ]
 
         for label, value, field_name, step in rows:
@@ -185,20 +207,31 @@ def _run_start_menu(screen, config: SimConfig) -> SimConfig | None:
                 "ON" if current_config.grow_on_win else "OFF",
                 "grow_on_win",
             ),
+            (
+                "Custom Outcome",
+                "ON" if current_config.custom_outcome_enabled else "OFF",
+                "custom_outcome_enabled",
+            ),
+            (
+                "Battle Rules",
+                current_config.battle_rule_set.title(),
+                "battle_rule_set",
+            ),
         ]
 
         for label, value, field_name in toggle_rows:
             label_surface = body_font.render(f"{label}: {value}", True, text_color)
             screen.blit(label_surface, (panel.left + 30, row_y + 10))
             toggle_rect = pygame.Rect(panel.right - 180, row_y, 124, 42)
-            toggle_label = "Toggle"
+            toggle_label = "Next" if field_name == "battle_rule_set" else "Toggle"
             draw_button(
                 toggle_rect,
                 toggle_label,
                 toggle_rect.collidepoint(mouse_pos),
                 button_color,
             )
-            buttons.append((toggle_rect, ("toggle", field_name, None)))
+            action_type = "cycle" if field_name == "battle_rule_set" else "toggle"
+            buttons.append((toggle_rect, (action_type, field_name, None)))
             row_y += row_gap
 
         start_rect = pygame.Rect(panel.left + 30, panel.bottom - 78, 240, 48)
@@ -238,6 +271,8 @@ def _run_start_menu(screen, config: SimConfig) -> SimConfig | None:
                         current_config = _adjust_menu_value(current_config, field_name, value)
                     elif action_type == "toggle":
                         current_config = _toggle_menu_value(current_config, field_name)
+                    elif action_type == "cycle":
+                        current_config = _cycle_menu_value(current_config, field_name)
                     break
 
         clock.tick(60)
@@ -302,10 +337,16 @@ def run(config: SimConfig | None = None) -> None:
         running = True
         speed_multiplier = 1.0
         screenshot_requested = False
-        show_debug_boundaries = False
+        show_debug_overlays = False
         winner = winner_kind_or_none(state)
         winner_announced = False
-        draw_state(screen, state, config, show_debug_boundaries=show_debug_boundaries)
+        draw_state(
+            screen,
+            state,
+            config,
+            show_debug_boundaries=show_debug_overlays,
+            show_mass_labels=show_debug_overlays,
+        )
         if winner is not None:
             _draw_winner_banner(screen, winner)
         _draw_restart_button(screen)
@@ -329,9 +370,9 @@ def run(config: SimConfig | None = None) -> None:
                     elif event.key == pygame.K_p:
                         screenshot_requested = True
                     elif event.key == pygame.K_d:
-                        show_debug_boundaries = not show_debug_boundaries
-                        state_label = "on" if show_debug_boundaries else "off"
-                        print(f"Collision debug {state_label}")
+                        show_debug_overlays = not show_debug_overlays
+                        state_label = "on" if show_debug_overlays else "off"
+                        print(f"Debug overlays {state_label}")
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if _click_hits_restart(event.pos, screen.get_width()):
                         restart_requested = True
@@ -348,14 +389,23 @@ def run(config: SimConfig | None = None) -> None:
                     convert_loser_to_winner=config.convert_loser_to_winner,
                     bounce_off_creatures=config.bounce_off_creatures,
                     grow_on_win=config.grow_on_win,
+                    winner_growth_percent=config.winner_growth_percent,
+                    custom_outcome_enabled=config.custom_outcome_enabled,
                     encounter_distance=config.creature_radius * 2,
                     dt_seconds=dt_seconds * speed_multiplier * config.tps_multiplier,
+                    battle_rules=battle_rules_for(config.battle_rule_set),
                 )
                 winner = winner_kind_or_none(state)
                 if winner is not None and not winner_announced:
                     print(f"Winner: {winner.value} at tick {state.tick}")
                     winner_announced = True
-            draw_state(screen, state, config, show_debug_boundaries=show_debug_boundaries)
+            draw_state(
+                screen,
+                state,
+                config,
+                show_debug_boundaries=show_debug_overlays,
+                show_mass_labels=show_debug_overlays,
+            )
             if winner is not None:
                 _draw_winner_banner(screen, winner)
             _draw_restart_button(screen)
@@ -389,8 +439,11 @@ def run_headless(
             convert_loser_to_winner=config.convert_loser_to_winner,
             bounce_off_creatures=config.bounce_off_creatures,
             grow_on_win=config.grow_on_win,
+            winner_growth_percent=config.winner_growth_percent,
+            custom_outcome_enabled=config.custom_outcome_enabled,
             encounter_distance=config.creature_radius * 2,
             dt_seconds=dt_seconds * config.tps_multiplier,
+            battle_rules=battle_rules_for(config.battle_rule_set),
         )
 
     winner = winner_kind_or_none(state)

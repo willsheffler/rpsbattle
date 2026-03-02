@@ -9,17 +9,20 @@ class SimConfig:
     fps: int = 60
     creature_count: int = 100
     random_seed: int | None = None
-    convert_loser_to_winner: bool = True
+    convert_loser_to_winner: bool = False
     creature_radius: int = 20
     creature_mass: float = 1
-    creature_speed: float = 40.0
+    creature_speed: float = 60.0
     min_speed_multiplier: float = 0.3
     max_speed_multiplier: float = 3
     tps_multiplier: float = 1.0
-    bounce_off_creatures: bool = True
+    bounce_off_creatures: bool = False
     obstacle_count: int = 7
     obstacle_avg_size: float = 40.0
-    grow_on_win: bool = False
+    grow_on_win: bool = True
+    winner_growth_percent: float = 70
+    custom_outcome_enabled: bool = True
+    battle_rule_set: str = "classic"
 
     @property
     def window_width(self) -> int:

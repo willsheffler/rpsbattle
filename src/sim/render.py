@@ -135,6 +135,17 @@ def _draw_creatures(screen: pygame.Surface, state: GameState, config: SimConfig)
         screen.blit(sprite, top_left)
 
 
+def _draw_creature_masses(screen: pygame.Surface, state: GameState) -> None:
+    font = pygame.font.Font(None, 20)
+    for creature in state.creatures:
+        label = str(int(round(creature.mass)))
+        text_surface = font.render(label, True, _TEXT_COLOR)
+        text_rect = text_surface.get_rect(
+            center=(int(round(creature.pos.x)), int(round(creature.pos.y)))
+        )
+        screen.blit(text_surface, text_rect)
+
+
 def _draw_obstacles(screen: pygame.Surface, state: GameState) -> None:
     for obstacle in state.obstacles:
         center = (int(obstacle.pos.x), int(obstacle.pos.y))
@@ -233,10 +244,13 @@ def draw_state(
     state: GameState,
     config: SimConfig,
     show_debug_boundaries: bool = False,
+    show_mass_labels: bool = False,
 ) -> None:
     screen.fill(_BG_COLOR)
     _draw_obstacles(screen, state)
     _draw_creatures(screen, state, config)
+    if show_mass_labels:
+        _draw_creature_masses(screen, state)
     if show_debug_boundaries:
         _draw_debug_boundaries(screen, state)
     _draw_hud(screen, state)

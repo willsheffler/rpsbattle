@@ -1,6 +1,7 @@
 import argparse
 
 from .config import SimConfig
+from .rps import RULESETS
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -49,12 +50,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--no-convert",
-        action="store_true",
+        action="store_false",
         help="Disable loser conversion during encounters.",
     )
     parser.add_argument(
         "--no-bounce",
-        action="store_true",
+        action="store_false",
         help="Disable creature-to-creature bounce on contact.",
     )
     parser.add_argument(
@@ -77,8 +78,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--grow-on-win",
-        action="store_true",
+        action="store_false",
         help="Make creatures grow by the loser's mass when they win or convert another creature.",
+    )
+    parser.add_argument(
+        "--growth-percent",
+        type=float,
+        default=defaults.winner_growth_percent,
+        help="Percentage of the loser's mass the winner gains when growth is enabled.",
+    )
+    parser.add_argument(
+        "--battle-rules",
+        choices=sorted(RULESETS),
+        default=defaults.battle_rule_set,
+        help="Choose how rock, paper, and scissors defeat each other.",
     )
     parser.add_argument(
         "--headless",
@@ -113,6 +126,8 @@ def main() -> None:
         parser.error("--obstacle-count must be greater than or equal to 0")
     if args.obstacle_avg_size < 0:
         parser.error("--obstacle-avg-size must be greater than or equal to 0")
+    if args.growth_percent < 0:
+        parser.error("--growth-percent must be greater than or equal to 0")
 
     from .app import run, run_headless
 
@@ -133,6 +148,8 @@ def main() -> None:
         obstacle_count=args.obstacle_count,
         obstacle_avg_size=args.obstacle_avg_size,
         grow_on_win=args.grow_on_win,
+        winner_growth_percent=args.growth_percent,
+        battle_rule_set=args.battle_rules,
     )
     if args.headless:
         run_headless(config, max_ticks=args.max_ticks, dt_seconds=args.headless_dt)

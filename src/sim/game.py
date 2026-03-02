@@ -20,7 +20,7 @@ from .geometry import (
     polygon_polygon_overlap,
     primitive_support_distance,
 )
-from .rps import CreatureType, rps_winner
+from .rps import BattleRules, CLASSIC_RULES, CreatureType, rps_winner
 
 
 @dataclass
@@ -30,6 +30,22 @@ class GameState:
     obstacles: list[Obstacle] = field(default_factory=list)
     tick: int = 0
     active_collision_pairs: set[tuple[int, int]] = field(default_factory=set)
+
+
+def custom_winner(left: Creature, right: Creature) -> CreatureType | None:
+    if left.kind == right.kind:
+        return None
+    bigger = max(left.mass, right.mass)
+    smaller = min(left.mass, right.mass)   
+    from random import random
+    overide_prob = (bigger/smaller - 1)/4 
+    overide = random() < overide_prob
+    if overide:
+        if left.mass > right.mass:
+            return left.kind
+        else:
+            return right.kind
+    return None
 
 
 def _translate(point: Position, dx: float, dy: float) -> Position:
@@ -311,15 +327,20 @@ def randomize_creature_speeds(
     return updated_creatures
 
 
-def _grow_creature(creature: Creature, loser_mass: float) -> Creature:
+def _grow_creature(
+    creature: Creature,
+    loser_mass: float,
+    winner_growth_percent: float,
+) -> Creature:
+    gained_mass = loser_mass * (winner_growth_percent / 100.0)
     return Creature(
         id=creature.id,
         kind=creature.kind,
         pos=creature.pos,
         vx=creature.vx,
         vy=creature.vy,
-        radius=creature.radius + loser_mass,
-        mass=creature.mass + loser_mass,
+        radius=creature.radius + gained_mass,
+        mass=creature.mass + gained_mass,
     )
 
 
@@ -489,8 +510,11 @@ def step_game(
     bounce_off_creatures: bool = True,
     creature_radius: float | None = None,
     grow_on_win: bool = False,
+    winner_growth_percent: float = 100.0,
+    custom_outcome_enabled: bool = True,
     encounter_distance: float = 16.0,
     dt_seconds: float = 1.0,
+    battle_rules: BattleRules = CLASSIC_RULES,
 ) -> GameState:
     del rng  # Kept in signature so the app can still pass one RNG object.
     moved_creatures: list[Creature] = []
@@ -552,16 +576,30 @@ def step_game(
                         mass=right.mass,
                     )
 
-                winner = rps_winner(left.kind, right.kind)
+                left = by_id[left_id]
+                right = by_id[right_id]
+                winner = None
+                if custom_outcome_enabled:
+                    winner = custom_winner(left, right)
+                if winner is None:
+                    winner = rps_winner(left.kind, right.kind, battle_rules)
                 if winner is None:
                     continue
                 if winner == left.kind:
                     if grow_on_win:
-                        by_id[left_id] = _grow_creature(by_id[left_id], by_id[right_id].mass)
+                        by_id[left_id] = _grow_creature(
+                            by_id[left_id],
+                            by_id[right_id].mass,
+                            winner_growth_percent,
+                        )
                     alive_ids.discard(right_id)
                 else:
                     if grow_on_win:
-                        by_id[right_id] = _grow_creature(by_id[right_id], by_id[left_id].mass)
+                        by_id[right_id] = _grow_creature(
+                            by_id[right_id],
+                            by_id[left_id].mass,
+                            winner_growth_percent,
+                        )
                     alive_ids.discard(left_id)
                     break
 
@@ -615,20 +653,34 @@ def step_game(
                     mass=right.mass,
                 )
 
+            left = by_id[left_id]
+            right = by_id[right_id]
             left_kind = kinds_by_id[left_id]
             right_kind = kinds_by_id[right_id]
-            winner = rps_winner(left_kind, right_kind)
+            winner = None
+            if custom_outcome_enabled:
+                winner = custom_winner(left, right)
+            if winner is None:
+                winner = rps_winner(left_kind, right_kind, battle_rules)
             if winner is None:
                 continue
 
             if winner == left_kind:
                 kinds_by_id[right_id] = left_kind
                 if grow_on_win:
-                    by_id[left_id] = _grow_creature(by_id[left_id], by_id[right_id].mass)
+                    by_id[left_id] = _grow_creature(
+                        by_id[left_id],
+                        by_id[right_id].mass,
+                        winner_growth_percent,
+                    )
             else:
                 kinds_by_id[left_id] = right_kind
                 if grow_on_win:
-                    by_id[right_id] = _grow_creature(by_id[right_id], by_id[left_id].mass)
+                    by_id[right_id] = _grow_creature(
+                        by_id[right_id],
+                        by_id[left_id].mass,
+                        winner_growth_percent,
+                    )
 
     resolved = [
         Creature(
