@@ -1,8 +1,10 @@
 from sim.app import (
     _adjust_menu_value,
+    _clamp_scroll_offset,
     _click_hits_restart,
     _cycle_menu_value,
     _restart_button_rect,
+    _scrollbar_thumb_rect,
     _toggle_menu_value,
     run_headless,
     winner_kind_or_none,
@@ -101,6 +103,14 @@ def test_cycle_menu_value_advances_battle_rules() -> None:
     assert updated.battle_rule_set == "reverse"
 
 
+def test_cycle_menu_value_advances_terrain_modes() -> None:
+    config = SimConfig(terrain_zone_mode="off")
+
+    updated = _cycle_menu_value(config, "terrain_zone_mode")
+
+    assert updated.terrain_zone_mode == "mud"
+
+
 def test_restart_button_rect_stays_in_top_right() -> None:
     rect = _restart_button_rect(640)
 
@@ -110,3 +120,20 @@ def test_restart_button_rect_stays_in_top_right() -> None:
 def test_click_hits_restart_detects_button_area() -> None:
     assert _click_hits_restart((500, 20), 640) is True
     assert _click_hits_restart((470, 20), 640) is False
+
+
+def test_clamp_scroll_offset_bounds_value() -> None:
+    assert _clamp_scroll_offset(-5, 100, 300) == 0
+    assert _clamp_scroll_offset(40, 100, 300) == 40
+    assert _clamp_scroll_offset(500, 100, 300) == 200
+
+
+def test_scrollbar_thumb_rect_stays_inside_track() -> None:
+    import pygame
+
+    track = pygame.Rect(10, 20, 10, 180)
+    thumb = _scrollbar_thumb_rect(track, 90, 360, 90)
+
+    assert thumb.width == track.width
+    assert track.top <= thumb.top
+    assert thumb.bottom <= track.bottom

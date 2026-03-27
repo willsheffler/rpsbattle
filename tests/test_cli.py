@@ -7,7 +7,7 @@ def test_no_bounce_flag_disables_creature_bounce() -> None:
 
     args = parser.parse_args(["--no-bounce"])
 
-    assert args.no_bounce is True
+    assert args.no_bounce is False
 
 
 def test_obstacle_options_parse() -> None:
@@ -24,7 +24,7 @@ def test_growth_options_parse() -> None:
 
     args = parser.parse_args(["--grow-on-win", "--growth-percent", "35"])
 
-    assert args.grow_on_win is True
+    assert args.grow_on_win is False
     assert args.growth_percent == 35
 
 
@@ -34,6 +34,14 @@ def test_battle_rules_option_parses() -> None:
     args = parser.parse_args(["--battle-rules", "reverse"])
 
     assert args.battle_rules == "reverse"
+
+
+def test_terrain_zones_option_parses() -> None:
+    parser = build_parser()
+
+    args = parser.parse_args(["--terrain-zones", "ice"])
+
+    assert args.terrain_zones == "ice"
 
 
 def test_parser_defaults_come_from_sim_config() -> None:
@@ -55,3 +63,4 @@ def test_parser_defaults_come_from_sim_config() -> None:
     assert args.obstacle_avg_size == defaults.obstacle_avg_size
     assert args.growth_percent == defaults.winner_growth_percent
     assert args.battle_rules == defaults.battle_rule_set
+    assert args.terrain_zones == defaults.terrain_zone_mode

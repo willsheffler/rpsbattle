@@ -23,6 +23,7 @@ class SimConfig:
     winner_growth_percent: float = 70
     custom_outcome_enabled: bool = True
     battle_rule_set: str = "classic"
+    terrain_zone_mode: str = "off"
 
     @property
     def window_width(self) -> int:

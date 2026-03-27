@@ -92,7 +92,30 @@ def _cycle_menu_value(config: SimConfig, field_name: str) -> SimConfig:
         current_index = rule_names.index(config.battle_rule_set)
         next_index = (current_index + 1) % len(rule_names)
         return replace(config, battle_rule_set=rule_names[next_index])
+    if field_name == "terrain_zone_mode":
+        terrain_modes = ["off", "mud", "ice", "mixed"]
+        current_index = terrain_modes.index(config.terrain_zone_mode)
+        next_index = (current_index + 1) % len(terrain_modes)
+        return replace(config, terrain_zone_mode=terrain_modes[next_index])
     raise ValueError(f"Unknown menu field: {field_name}")
+
+
+def _clamp_scroll_offset(offset: int, viewport_height: int, content_height: int) -> int:
+    max_offset = max(0, content_height - viewport_height)
+    return max(0, min(offset, max_offset))
+
+
+def _scrollbar_thumb_rect(track_rect, viewport_height: int, content_height: int, scroll_offset: int):
+    import pygame
+
+    if content_height <= viewport_height:
+        return pygame.Rect(track_rect.x, track_rect.y, track_rect.width, track_rect.height)
+
+    thumb_height = max(36, int(round(track_rect.height * (viewport_height / content_height))))
+    max_offset = content_height - viewport_height
+    travel = track_rect.height - thumb_height
+    thumb_y = track_rect.y + int(round((scroll_offset / max_offset) * travel))
+    return pygame.Rect(track_rect.x, thumb_y, track_rect.width, thumb_height)
 
 
 def _run_start_menu(screen, config: SimConfig) -> SimConfig | None:
@@ -110,6 +133,8 @@ def _run_start_menu(screen, config: SimConfig) -> SimConfig | None:
     start_color = (120, 165, 94)
     hover_color = (232, 214, 187)
     current_config = config
+    scroll_offset = 0
+    scroll_step = 56
 
     def draw_button(rect: pygame.Rect, label: str, hovered: bool, color) -> None:
         fill = hover_color if hovered else color
@@ -118,6 +143,36 @@ def _run_start_menu(screen, config: SimConfig) -> SimConfig | None:
         text_surface = body_font.render(label, True, text_color)
         text_rect = text_surface.get_rect(center=rect.center)
         screen.blit(text_surface, text_rect)
+
+    rows = [
+        ("Creatures", lambda c: str(c.creature_count), "creature_count", 10),
+        ("Obstacle Count", lambda c: str(c.obstacle_count), "obstacle_count", 1),
+        ("Obstacle Avg Size", lambda c: f"{c.obstacle_avg_size:.0f}", "obstacle_avg_size", 8.0),
+        ("Creature Mass", lambda c: f"{c.creature_mass:.0f}", "creature_mass", 2.0),
+        ("Creature Speed", lambda c: f"{c.creature_speed:.0f}", "creature_speed", 5.0),
+        (
+            "Growth Percent",
+            lambda c: f"{c.winner_growth_percent:.0f}%",
+            "winner_growth_percent",
+            10.0,
+        ),
+    ]
+    toggle_rows = [
+        ("Creature Bounce", lambda c: "ON" if c.bounce_off_creatures else "OFF", "bounce_off_creatures"),
+        (
+            "Convert Loser",
+            lambda c: "ON" if c.convert_loser_to_winner else "OFF",
+            "convert_loser_to_winner",
+        ),
+        ("Grow On Win", lambda c: "ON" if c.grow_on_win else "OFF", "grow_on_win"),
+        (
+            "Bigger Wins",
+            lambda c: "ON" if c.custom_outcome_enabled else "OFF",
+            "custom_outcome_enabled",
+        ),
+        ("Battle Rules", lambda c: c.battle_rule_set.title(), "battle_rule_set"),
+        ("Terrain Zones", lambda c: c.terrain_zone_mode.title(), "terrain_zone_mode"),
+    ]
 
     while True:
         screen.fill(bg_color)
@@ -137,104 +192,84 @@ def _run_start_menu(screen, config: SimConfig) -> SimConfig | None:
 
         mouse_pos = pygame.mouse.get_pos()
         buttons: list[tuple[pygame.Rect, tuple[str, str, int | float | None]]] = []
-        row_y = panel.top + 120
         row_gap = 62
+        content_top = panel.top + 120
+        option_label_x = panel.left + 44
+        button_right = panel.right - 132
+        button_y_offset = 4
+        start_rect = pygame.Rect(panel.left + 30, panel.bottom - 72, 240, 48)
+        viewport_rect = pygame.Rect(
+            panel.left + 24,
+            content_top,
+            panel.width - 84,
+            max(100, start_rect.top - content_top - 18),
+        )
+        scrollbar_track = pygame.Rect(panel.right - 34, viewport_rect.top, 10, viewport_rect.height)
+        content_height = (len(rows) + len(toggle_rows)) * row_gap
+        scroll_offset = _clamp_scroll_offset(scroll_offset, viewport_rect.height, content_height)
 
-        rows = [
-            ("Creatures", str(current_config.creature_count), "creature_count", 10),
-            ("Obstacle Count", str(current_config.obstacle_count), "obstacle_count", 1),
-            (
-                "Obstacle Avg Size",
-                f"{current_config.obstacle_avg_size:.0f}",
-                "obstacle_avg_size",
-                8.0,
-            ),
-            (
-                "Creature Mass",
-                f"{current_config.creature_mass:.0f}",
-                "creature_mass",
-                2.0,
-            ),
-            (
-                "Creature Speed",
-                f"{current_config.creature_speed:.0f}",
-                "creature_speed",
-                5.0,
-            ),
-            (
-                "Growth Percent",
-                f"{current_config.winner_growth_percent:.0f}%",
-                "winner_growth_percent",
-                10.0,
-            ),
-        ]
+        previous_clip = screen.get_clip()
+        screen.set_clip(viewport_rect)
+        row_y = content_top - scroll_offset
 
-        for label, value, field_name, step in rows:
-            label_surface = body_font.render(f"{label}: {value}", True, text_color)
-            screen.blit(label_surface, (panel.left + 30, row_y + 10))
+        for label, value_fn, field_name, step in rows:
+            if row_y + 42 >= viewport_rect.top and row_y <= viewport_rect.bottom:
+                label_surface = body_font.render(
+                    f"{label}: {value_fn(current_config)}",
+                    True,
+                    text_color,
+                )
+                screen.blit(label_surface, (option_label_x, row_y + 10))
 
-            minus_rect = pygame.Rect(panel.right - 180, row_y, 56, 42)
-            plus_rect = pygame.Rect(panel.right - 112, row_y, 56, 42)
-            draw_button(
-                minus_rect,
-                "-",
-                minus_rect.collidepoint(mouse_pos),
-                button_color,
-            )
-            draw_button(
-                plus_rect,
-                "+",
-                plus_rect.collidepoint(mouse_pos),
-                button_color,
-            )
-            buttons.append((minus_rect, ("adjust", field_name, -step)))
-            buttons.append((plus_rect, ("adjust", field_name, step)))
+                minus_rect = pygame.Rect(button_right - 68, row_y + button_y_offset, 56, 42)
+                plus_rect = pygame.Rect(button_right, row_y + button_y_offset, 56, 42)
+                draw_button(minus_rect, "-", minus_rect.collidepoint(mouse_pos), button_color)
+                draw_button(plus_rect, "+", plus_rect.collidepoint(mouse_pos), button_color)
+                buttons.append((minus_rect, ("adjust", field_name, -step)))
+                buttons.append((plus_rect, ("adjust", field_name, step)))
             row_y += row_gap
 
-        toggle_rows = [
-            (
-                "Creature Bounce",
-                "ON" if current_config.bounce_off_creatures else "OFF",
-                "bounce_off_creatures",
-            ),
-            (
-                "Convert Loser",
-                "ON" if current_config.convert_loser_to_winner else "OFF",
-                "convert_loser_to_winner",
-            ),
-            (
-                "Grow On Win",
-                "ON" if current_config.grow_on_win else "OFF",
-                "grow_on_win",
-            ),
-            (
-                "Custom Outcome",
-                "ON" if current_config.custom_outcome_enabled else "OFF",
-                "custom_outcome_enabled",
-            ),
-            (
-                "Battle Rules",
-                current_config.battle_rule_set.title(),
-                "battle_rule_set",
-            ),
-        ]
-
-        for label, value, field_name in toggle_rows:
-            label_surface = body_font.render(f"{label}: {value}", True, text_color)
-            screen.blit(label_surface, (panel.left + 30, row_y + 10))
-            toggle_rect = pygame.Rect(panel.right - 180, row_y, 124, 42)
-            toggle_label = "Next" if field_name == "battle_rule_set" else "Toggle"
-            draw_button(
-                toggle_rect,
-                toggle_label,
-                toggle_rect.collidepoint(mouse_pos),
-                button_color,
-            )
-            action_type = "cycle" if field_name == "battle_rule_set" else "toggle"
-            buttons.append((toggle_rect, (action_type, field_name, None)))
+        for label, value_fn, field_name in toggle_rows:
+            if row_y + 42 >= viewport_rect.top and row_y <= viewport_rect.bottom:
+                label_surface = body_font.render(
+                    f"{label}: {value_fn(current_config)}",
+                    True,
+                    text_color,
+                )
+                screen.blit(label_surface, (option_label_x, row_y + 10))
+                toggle_rect = pygame.Rect(button_right - 68, row_y + button_y_offset, 124, 42)
+                toggle_label = (
+                    "Next"
+                    if field_name in {"battle_rule_set", "terrain_zone_mode"}
+                    else "Toggle"
+                )
+                draw_button(
+                    toggle_rect,
+                    toggle_label,
+                    toggle_rect.collidepoint(mouse_pos),
+                    button_color,
+                )
+                action_type = (
+                    "cycle"
+                    if field_name in {"battle_rule_set", "terrain_zone_mode"}
+                    else "toggle"
+                )
+                buttons.append((toggle_rect, (action_type, field_name, None)))
             row_y += row_gap
 
-        start_rect = pygame.Rect(panel.left + 30, panel.bottom - 78, 240, 48)
+        screen.set_clip(previous_clip)
+
+        pygame.draw.rect(screen, outline_color, viewport_rect, 2, border_radius=12)
+        pygame.draw.rect(screen, (229, 219, 202), scrollbar_track, border_radius=6)
+        thumb_rect = _scrollbar_thumb_rect(
+            scrollbar_track,
+            viewport_rect.height,
+            content_height,
+            scroll_offset,
+        )
+        pygame.draw.rect(screen, button_color, thumb_rect, border_radius=6)
+        pygame.draw.rect(screen, outline_color, thumb_rect, 2, border_radius=6)
+
         draw_button(
             start_rect,
             "Start Simulation",
@@ -244,7 +279,7 @@ def _run_start_menu(screen, config: SimConfig) -> SimConfig | None:
         buttons.append((start_rect, ("start", "", None)))
 
         tip_surface = small_font.render(
-            "Tip: use the CLI for exact values, or use this menu for quick experiments.",
+            "Use the mouse wheel to scroll the options.",
             True,
             text_color,
         )
@@ -260,6 +295,12 @@ def _run_start_menu(screen, config: SimConfig) -> SimConfig | None:
             if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
                 file_path = _save_screenshot(screen)
                 print(f"Screenshot saved: {file_path}")
+            if event.type == pygame.MOUSEWHEEL:
+                scroll_offset = _clamp_scroll_offset(
+                    scroll_offset - (event.y * scroll_step),
+                    viewport_rect.height,
+                    content_height,
+                )
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 for rect, action in buttons:
                     if not rect.collidepoint(event.pos):
@@ -274,6 +315,13 @@ def _run_start_menu(screen, config: SimConfig) -> SimConfig | None:
                     elif action_type == "cycle":
                         current_config = _cycle_menu_value(current_config, field_name)
                     break
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button in {4, 5}:
+                direction = 1 if event.button == 5 else -1
+                scroll_offset = _clamp_scroll_offset(
+                    scroll_offset + (direction * scroll_step),
+                    viewport_rect.height,
+                    content_height,
+                )
 
         clock.tick(60)
 

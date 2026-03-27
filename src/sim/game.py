@@ -3,7 +3,7 @@ import random
 from collections import Counter
 from dataclasses import dataclass, field
 
-from .board import Board, Obstacle, Position
+from .board import Board, Obstacle, Position, TerrainZone
 from .config import SimConfig
 from .creature import Creature
 from .geometry import (
@@ -28,6 +28,7 @@ class GameState:
     board: Board
     creatures: list[Creature]
     obstacles: list[Obstacle] = field(default_factory=list)
+    terrain_zones: list[TerrainZone] = field(default_factory=list)
     tick: int = 0
     active_collision_pairs: set[tuple[int, int]] = field(default_factory=set)
 
@@ -272,6 +273,72 @@ def _spawn_obstacles(
     return obstacles
 
 
+def _spawn_terrain_zones(
+    rng: random.Random,
+    board: Board,
+    terrain_zone_mode: str,
+) -> list[TerrainZone]:
+    if terrain_zone_mode == "off":
+        return []
+
+    zone_specs: list[tuple[str, float, tuple[int, int, int]]]
+    if terrain_zone_mode == "mud":
+        zone_specs = [("mud", 0.55, (160, 130, 98))]
+    elif terrain_zone_mode == "ice":
+        zone_specs = [("ice", 1.6, (126, 196, 255))]
+    elif terrain_zone_mode == "mixed":
+        zone_specs = [
+            ("mud", 0.55, (160, 130, 98)),
+            ("ice", 1.55, (126, 196, 255)),
+        ]
+    else:
+        raise ValueError(f"Unknown terrain zone mode: {terrain_zone_mode}")
+
+    zones: list[TerrainZone] = []
+    min_width = max(24.0, board.width * 0.14)
+    max_width = max(min_width, board.width * 0.34)
+    min_height = max(24.0, board.height * 0.14)
+    max_height = max(min_height, board.height * 0.34)
+
+    def zones_overlap(left: TerrainZone, right: TerrainZone) -> bool:
+        left_center = left.center
+        right_center = right.center
+        dx = left_center.x - right_center.x
+        dy = left_center.y - right_center.y
+        left_radius = max(left.width, left.height) * (1.0 + left.warp_amount) * 0.5
+        right_radius = max(right.width, right.height) * (1.0 + right.warp_amount) * 0.5
+        min_distance = left_radius + right_radius
+        return (dx * dx) + (dy * dy) < (min_distance * min_distance)
+
+    for kind, speed_multiplier, color in zone_specs:
+        candidate: TerrainZone | None = None
+        for _attempt in range(50):
+            width = rng.uniform(min_width, max_width)
+            height = rng.uniform(min_height, max_height)
+            max_x = max(0.0, board.width - width)
+            max_y = max(0.0, board.height - height)
+            candidate = TerrainZone(
+                kind=kind,
+                pos=Position(
+                    rng.uniform(0.0, max_x),
+                    rng.uniform(0.0, max_y),
+                ),
+                width=width,
+                height=height,
+                speed_multiplier=speed_multiplier,
+                color=color,
+                warp_amount=rng.uniform(0.12, 0.28),
+                warp_phase=rng.uniform(0.0, math.tau),
+            )
+            if any(zones_overlap(candidate, existing) for existing in zones):
+                continue
+            zones.append(candidate)
+            break
+        if candidate is not None and not zones:
+            zones.append(candidate)
+    return zones
+
+
 def create_game(config: SimConfig) -> GameState:
     rng = random.Random(config.random_seed)
     board = Board(width=config.window_width, height=config.window_height)
@@ -280,6 +347,11 @@ def create_game(config: SimConfig) -> GameState:
         board,
         obstacle_count=config.obstacle_count,
         obstacle_avg_size=config.obstacle_avg_size,
+    )
+    terrain_zones = _spawn_terrain_zones(
+        rng,
+        board,
+        config.terrain_zone_mode,
     )
     creatures = [
         _spawn_creature(
@@ -299,7 +371,23 @@ def create_game(config: SimConfig) -> GameState:
         min_speed=config.creature_speed * config.min_speed_multiplier,
         max_speed=config.creature_speed * config.max_speed_multiplier,
     )
-    return GameState(board=board, creatures=creatures, obstacles=obstacles)
+    return GameState(
+        board=board,
+        creatures=creatures,
+        obstacles=obstacles,
+        terrain_zones=terrain_zones,
+    )
+
+
+def _terrain_speed_multiplier(
+    pos: Position,
+    terrain_zones: list[TerrainZone],
+) -> float:
+    multiplier = 1.0
+    for zone in terrain_zones:
+        if zone.contains(pos):
+            multiplier *= zone.speed_multiplier
+    return multiplier
 
 
 def randomize_creature_speeds(
@@ -389,6 +477,7 @@ def _move_creature(
     creature: Creature,
     board: Board,
     obstacles: list[Obstacle],
+    terrain_zones: list[TerrainZone],
     default_radius: float | None,
     dt_seconds: float,
 ) -> Creature:
@@ -397,8 +486,9 @@ def _move_creature(
         if creature.radius > 0.0
         else (default_radius if default_radius is not None else 0.0)
     )
-    next_x = creature.pos.x + (creature.vx * dt_seconds)
-    next_y = creature.pos.y + (creature.vy * dt_seconds)
+    speed_multiplier = _terrain_speed_multiplier(creature.pos, terrain_zones)
+    next_x = creature.pos.x + (creature.vx * dt_seconds * speed_multiplier)
+    next_y = creature.pos.y + (creature.vy * dt_seconds * speed_multiplier)
     next_vx = creature.vx
     next_vy = creature.vy
 
@@ -525,6 +615,7 @@ def step_game(
                 creature,
                 state.board,
                 state.obstacles,
+                state.terrain_zones,
                 creature_radius,
                 dt_seconds,
             )
@@ -610,6 +701,7 @@ def step_game(
                 key=lambda c: c.id,
             ),
             obstacles=state.obstacles,
+            terrain_zones=state.terrain_zones,
             tick=state.tick + 1,
             active_collision_pairs=collisions_this_tick,
         )
@@ -699,6 +791,7 @@ def step_game(
         board=state.board,
         creatures=sorted(resolved, key=lambda c: c.id),
         obstacles=state.obstacles,
+        terrain_zones=state.terrain_zones,
         tick=state.tick + 1,
         active_collision_pairs=collisions_this_tick,
     )

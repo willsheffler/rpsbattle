@@ -17,6 +17,7 @@ _COLOR_BY_TYPE = {
 }
 _TEXT_COLOR = (25, 30, 40)
 _SPRITE_DIR = Path("assets/sprites")
+_TEXTURE_DIR = Path("assets/textures")
 _DEBUG_CREATURE_COLOR = (255, 140, 60)
 _DEBUG_OBSTACLE_COLOR = (80, 20, 20)
 
@@ -125,6 +126,13 @@ def _load_sprite(kind: CreatureType, radius: int) -> pygame.Surface:
     return sprite
 
 
+@lru_cache(maxsize=16)
+def _load_terrain_texture(kind: str, width: int, height: int) -> pygame.Surface:
+    texture_path = _TEXTURE_DIR / f"terrain-{kind}.png"
+    texture = pygame.image.load(str(texture_path)).convert_alpha()
+    return pygame.transform.smoothscale(texture, (max(1, width), max(1, height)))
+
+
 def _draw_creatures(screen: pygame.Surface, state: GameState, config: SimConfig) -> None:
     for creature in state.creatures:
         radius = max(1, int(round(creature.radius)))
@@ -188,6 +196,54 @@ def _draw_obstacles(screen: pygame.Surface, state: GameState) -> None:
             pygame.draw.circle(screen, outline, center, size, 3)
 
 
+def _terrain_points(zone) -> list[tuple[int, int]]:
+    center = zone.center
+    points: list[tuple[int, int]] = []
+    for step in range(24):
+        angle = (math.tau * step) / 24.0
+        scale = zone.radius_scale_at_angle(angle)
+        radius_x = (zone.width / 2.0) * scale
+        radius_y = (zone.height / 2.0) * scale
+        points.append(
+            (
+                int(round(center.x + (math.cos(angle) * radius_x))),
+                int(round(center.y + (math.sin(angle) * radius_y))),
+            )
+        )
+    return points
+
+
+def _draw_textured_terrain(surface: pygame.Surface, zone, points: list[tuple[int, int]]) -> None:
+    xs = [point[0] for point in points]
+    ys = [point[1] for point in points]
+    left = min(xs)
+    top = min(ys)
+    width = max(1, max(xs) - left)
+    height = max(1, max(ys) - top)
+
+    local_points = [(x - left, y - top) for x, y in points]
+    texture = _load_terrain_texture(zone.kind, width, height).copy()
+
+    mask = pygame.Surface((width, height), pygame.SRCALPHA)
+    pygame.draw.polygon(mask, (255, 255, 255, 255), local_points)
+    texture.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+
+    tint = pygame.Surface((width, height), pygame.SRCALPHA)
+    pygame.draw.polygon(tint, (*zone.color, 65), local_points)
+    texture.blit(tint, (0, 0))
+
+    surface.blit(texture, (left, top))
+
+
+def _draw_terrain_zones(screen: pygame.Surface, state: GameState) -> None:
+    for zone in state.terrain_zones:
+        points = _terrain_points(zone)
+        overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+        _draw_textured_terrain(overlay, zone, points)
+        screen.blit(overlay, (0, 0))
+        pygame.draw.polygon(screen, zone.color, points, 3)
+
+
 def _draw_hud(screen: pygame.Surface, state: GameState) -> None:
     font = pygame.font.Font(None, 26)
     counts = creature_counts(state)
@@ -247,6 +303,7 @@ def draw_state(
     show_mass_labels: bool = False,
 ) -> None:
     screen.fill(_BG_COLOR)
+    _draw_terrain_zones(screen, state)
     _draw_obstacles(screen, state)
     _draw_creatures(screen, state, config)
     if show_mass_labels:

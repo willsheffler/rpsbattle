@@ -336,6 +336,124 @@ def test_create_game_spawns_non_overlapping_obstacles() -> None:
             assert (dx * dx) + (dy * dy) >= min_distance * min_distance
 
 
+def test_create_game_spawns_terrain_zones_for_mixed_mode() -> None:
+    from sim.config import SimConfig
+
+    config = SimConfig(
+        board_width=20,
+        board_height=16,
+        cell_size=10,
+        creature_count=0,
+        random_seed=17,
+        terrain_zone_mode="mixed",
+    )
+
+    state = create_game(config)
+
+    assert [zone.kind for zone in state.terrain_zones] == ["mud", "ice"]
+    for zone in state.terrain_zones:
+        assert zone.width > 0
+        assert zone.height > 0
+        assert 0 <= zone.pos.x <= (config.window_width - zone.width)
+        assert 0 <= zone.pos.y <= (config.window_height - zone.height)
+        assert zone.width != pytest.approx(config.window_width * 0.24)
+        assert zone.height != pytest.approx(config.window_height * 0.48)
+
+
+def test_create_game_terrain_zones_are_seeded() -> None:
+    from sim.config import SimConfig
+
+    config = SimConfig(
+        board_width=20,
+        board_height=16,
+        cell_size=10,
+        creature_count=0,
+        random_seed=17,
+        terrain_zone_mode="mixed",
+    )
+
+    first = create_game(config)
+    second = create_game(config)
+
+    assert first.terrain_zones == second.terrain_zones
+
+
+def test_create_game_terrain_zones_do_not_overlap() -> None:
+    from sim.config import SimConfig
+
+    config = SimConfig(
+        board_width=20,
+        board_height=16,
+        cell_size=10,
+        creature_count=0,
+        random_seed=17,
+        terrain_zone_mode="mixed",
+    )
+
+    state = create_game(config)
+
+    assert len(state.terrain_zones) == 2
+    left, right = state.terrain_zones
+    dx = left.center.x - right.center.x
+    dy = left.center.y - right.center.y
+    left_radius = max(left.width, left.height) * (1.0 + left.warp_amount) * 0.5
+    right_radius = max(right.width, right.height) * (1.0 + right.warp_amount) * 0.5
+    min_distance = left_radius + right_radius
+    assert (dx * dx) + (dy * dy) >= (min_distance * min_distance)
+
+
+def test_creature_moves_slower_in_mud_zone() -> None:
+    from sim.board import TerrainZone
+
+    state = GameState(
+        board=Board(width=100, height=100),
+        creatures=[
+            Creature(id=1, kind=CreatureType.ROCK, pos=Position(20, 20), vx=10.0, vy=0.0)
+        ],
+        terrain_zones=[
+            TerrainZone(
+                kind="mud",
+                pos=Position(0, 0),
+                width=50,
+                height=50,
+                speed_multiplier=0.5,
+                color=(160, 130, 98),
+                warp_amount=0.0,
+            )
+        ],
+    )
+
+    next_state = step_game(state, StubRng(), dt_seconds=1.0)
+
+    assert next_state.creatures[0].pos.x == pytest.approx(25.0)
+
+
+def test_creature_moves_faster_in_ice_zone() -> None:
+    from sim.board import TerrainZone
+
+    state = GameState(
+        board=Board(width=100, height=100),
+        creatures=[
+            Creature(id=1, kind=CreatureType.ROCK, pos=Position(20, 20), vx=10.0, vy=0.0)
+        ],
+        terrain_zones=[
+            TerrainZone(
+                kind="ice",
+                pos=Position(0, 0),
+                width=50,
+                height=50,
+                speed_multiplier=1.5,
+                color=(126, 196, 255),
+                warp_amount=0.0,
+            )
+        ],
+    )
+
+    next_state = step_game(state, StubRng(), dt_seconds=1.0)
+
+    assert next_state.creatures[0].pos.x == pytest.approx(35.0)
+
+
 def test_create_game_spawns_creatures_away_from_walls() -> None:
     from sim.config import SimConfig
 

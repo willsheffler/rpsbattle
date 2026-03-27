@@ -94,6 +94,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Choose how rock, paper, and scissors defeat each other.",
     )
     parser.add_argument(
+        "--terrain-zones",
+        choices=["off", "mud", "ice", "mixed"],
+        default=defaults.terrain_zone_mode,
+        help="Add terrain areas that slow creatures down or speed them up.",
+    )
+    parser.add_argument(
         "--headless",
         action="store_true",
         help="Run simulation without graphics and print winner.",
@@ -150,6 +156,7 @@ def main() -> None:
         grow_on_win=args.grow_on_win,
         winner_growth_percent=args.growth_percent,
         battle_rule_set=args.battle_rules,
+        terrain_zone_mode=args.terrain_zones,
     )
     if args.headless:
         run_headless(config, max_ticks=args.max_ticks, dt_seconds=args.headless_dt)
