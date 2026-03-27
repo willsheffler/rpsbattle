@@ -37,12 +37,17 @@
 ## Jonah Quiz Check
 - Score: 5 / 5
 - Quiz focus: terrain settings, mud vs ice behavior, random seeds, menu scrolling, and test verification.
-- Jonah answers:
-  - The `Terrain Zones` setting changes which terrain zones appear in the area where the creatures move around.
-  - Mud slows creatures down and ice speeds them up.
-  - A random seed lets the terrain spawn randomly while still allowing the same layout to repeat when the same seed is used again.
-  - The scrollbar fixed the problem of having too many settings to fit conveniently in the options menu at once.
-  - The final full test run used `pytest`, and all `56` tests passed.
+- Questions and answers:
+  - Question: What does the `Terrain Zones` setting change in the game?
+  - Answer: The `Terrain Zones` setting changes which terrain zones appear in the area where the creatures move around.
+  - Question: What is the difference between `Mud` and `Ice`?
+  - Answer: Mud slows creatures down and ice speeds them up.
+  - Question: Why do we use a random seed for terrain spawning?
+  - Answer: A random seed lets the terrain spawn randomly while still allowing the same layout to repeat when the same seed is used again.
+  - Question: What problem did the scrollbar fix in the settings menu?
+  - Answer: The scrollbar fixed the problem of having too many settings to fit conveniently in the options menu at once.
+  - Question: What was the final result of the full test run?
+  - Answer: The final full test run used `pytest`, and all `56` tests passed.
 
 ## Evidence
 - Screenshots:
