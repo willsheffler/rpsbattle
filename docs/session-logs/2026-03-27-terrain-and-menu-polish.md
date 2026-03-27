@@ -36,12 +36,17 @@
 
 ## Evidence
 - Screenshots:
-  - `screenshots/manual-20260327-141823.png` - manual screen capture of the game window
-  - `screenshots/rpsbattle-20260327-141728-091970.png`
-  - `screenshots/rpsbattle-20260327-142123-763390.png`
-  - `screenshots/rpsbattle-20260327-142133-471656.png`
-  - `screenshots/rpsbattle-20260327-142142-372647.png`
-  - `screenshots/rpsbattle-20260327-142142-557722.png`
+  - Manual screen capture:
+
+    ![Manual game screenshot](../../screenshots/manual-20260327-141823.png)
+
+  - In-game screenshots:
+
+    ![Terrain screenshot 1](../../screenshots/rpsbattle-20260327-141728-091970.png)
+    ![Terrain screenshot 2](../../screenshots/rpsbattle-20260327-142123-763390.png)
+    ![Terrain screenshot 3](../../screenshots/rpsbattle-20260327-142133-471656.png)
+    ![Terrain screenshot 4](../../screenshots/rpsbattle-20260327-142142-372647.png)
+    ![Terrain screenshot 5](../../screenshots/rpsbattle-20260327-142142-557722.png)
 - Files touched:
   - `src/sim/app.py`
   - `src/sim/board.py`
